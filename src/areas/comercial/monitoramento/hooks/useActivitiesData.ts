@@ -8,7 +8,7 @@ export function useActivitiesData(filters: MonitoringFilters) {
   return useQuery<UserActivity[]>({
     queryKey: ['gold_user_activities', filters.dateRange.from?.toISOString(), filters.dateRange.to?.toISOString()],
     queryFn: async () => {
-      let query = supabase.from('gold_user_activities').select('*');
+      let query = supabase.schema('gold').from('user_activities').select('*');
       if (filters.dateRange.from) {
         query = query.gte('activity_date', filters.dateRange.from.toISOString().split('T')[0]);
       }

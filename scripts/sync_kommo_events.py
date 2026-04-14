@@ -27,6 +27,7 @@ SUPABASE_HEADERS = {
     'apikey': SUPABASE_KEY,
     'Authorization': f'Bearer {SUPABASE_KEY}',
     'Content-Type': 'application/json',
+    'Content-Profile': 'bronze',
     'Prefer': 'resolution=merge-duplicates',
 }
 

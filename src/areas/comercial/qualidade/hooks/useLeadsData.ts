@@ -8,6 +8,7 @@ export function useLeadsData() {
     queryKey: ['leads_quality'],
     queryFn: async () => {
       const { data, error } = await supabase
+        .schema('gold')
         .from('leads_quality')
         .select('*')
         .order('created_at_kommo', { ascending: false });
