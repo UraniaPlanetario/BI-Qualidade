@@ -136,8 +136,12 @@ export function UserDetailBlock({ activities, dateRange }: { activities: UserAct
 
   // Weekly data
   const weeklyData = useMemo(() => {
+    const fromStr = dateRange.from ? format(dateRange.from, 'yyyy-MM-dd') : null;
+    const toStr = dateRange.to ? format(dateRange.to, 'yyyy-MM-dd') : null;
     const map: Record<string, { count: number; minDate: Date }> = {};
     for (const a of filtered) {
+      if (fromStr && a.activity_date < fromStr) continue;
+      if (toStr && a.activity_date > toStr) continue;
       const date = parseISO(a.activity_date);
       const week = getISOWeek(date);
       const year = getISOWeekYear(date);
@@ -154,7 +158,7 @@ export function UserDetailBlock({ activities, dateRange }: { activities: UserAct
         week: format(startOfISOWeek(minDate), 'dd/MM') + ' - ' + format(endOfISOWeek(minDate), 'dd/MM'),
         count,
       }));
-  }, [filtered]);
+  }, [filtered, dateRange]);
 
   // Hourly average data
   const hourlyAvgData = useMemo(() => {
@@ -236,16 +240,6 @@ export function UserDetailBlock({ activities, dateRange }: { activities: UserAct
               <div className="card-glass p-4 rounded-xl text-center">
                 <p className="text-muted-foreground text-xs mb-1">Média por Dia</p>
                 <p className="text-2xl font-bold text-foreground">{kpis.avgPerDay.toFixed(1)}</p>
-                {groupAvg && kpis.activeDays > 0 && (() => {
-                  const groupAvgPerDay = groupAvg.avg / Math.max(kpis.activeDays, 1);
-                  const diff = kpis.avgPerDay - groupAvgPerDay;
-                  const pct = groupAvgPerDay > 0 ? ((diff / groupAvgPerDay) * 100) : 0;
-                  return (
-                    <span className={`text-[10px] block mt-1 ${pct >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                      {pct >= 0 ? '↑' : '↓'} {Math.abs(pct).toFixed(1)}% vs grupo
-                    </span>
-                  );
-                })()}
               </div>
 
               {/* Dias Ativos */}
@@ -280,26 +274,23 @@ export function UserDetailBlock({ activities, dateRange }: { activities: UserAct
           <div className="card-glass p-4 rounded-xl">
             <h3 className="text-base font-semibold text-foreground mb-4">Média de Atividades por Hora</h3>
             <ResponsiveContainer width="100%" height={280}>
-              <BarChart data={hourlyAvgData.map((d, i) => ({
+              <BarChart data={hourlyAvgData.filter((d) => d.avg > 0).map((d) => ({
                 ...d,
-                generalAvg: generalAvg.hourlyAvg[i],
-                groupAvg: groupHourlyAvg ? groupHourlyAvg[i] : undefined,
+                groupAvgVal: groupHourlyAvg ? groupHourlyAvg[parseInt(d.hour)] : undefined,
               }))}>
                 <XAxis dataKey="hour" stroke="hsl(240, 5%, 65%)" tick={{ fill: 'hsl(240, 5%, 65%)', fontSize: 11 }} />
                 <YAxis stroke="hsl(240, 5%, 65%)" />
                 <Tooltip {...TOOLTIP_STYLE} formatter={(value: number) => [value.toLocaleString('pt-BR'), 'Média']} />
                 <Bar dataKey="avg" fill="hsl(270, 50%, 70%)" radius={[4, 4, 0, 0]} />
-                <ReferenceLine y={hourlyAvgData.reduce((s, d) => s + d.avg, 0) / 24} stroke="hsl(45, 80%, 55%)" strokeDasharray="4 4" label="" />
-                {groupHourlyAvg && (
-                  <ReferenceLine y={groupHourlyAvg.reduce((s, v) => s + v, 0) / 24} stroke="hsl(142, 60%, 50%)" strokeDasharray="4 4" label="" />
-                )}
+                {groupHourlyAvg && (() => {
+                  const activeHours = hourlyAvgData.filter((d) => d.avg > 0);
+                  const groupVals = activeHours.map((d) => groupHourlyAvg[parseInt(d.hour)]);
+                  const groupAvgLine = groupVals.length > 0 ? groupVals.reduce((s, v) => s + v, 0) / groupVals.length : 0;
+                  return <ReferenceLine y={groupAvgLine} stroke="hsl(142, 60%, 50%)" strokeDasharray="4 4" />;
+                })()}
               </BarChart>
             </ResponsiveContainer>
             <div className="flex gap-4 mt-2 justify-center">
-              <div className="flex items-center gap-1.5">
-                <div className="w-4 h-0.5 bg-yellow-400" style={{ borderTop: '2px dashed hsl(45, 80%, 55%)' }} />
-                <span className="text-[10px] text-muted-foreground">Média geral (todos os usuários)</span>
-              </div>
               {groupHourlyAvg && (
                 <div className="flex items-center gap-1.5">
                   <div className="w-4 h-0.5" style={{ borderTop: '2px dashed hsl(142, 60%, 50%)' }} />
