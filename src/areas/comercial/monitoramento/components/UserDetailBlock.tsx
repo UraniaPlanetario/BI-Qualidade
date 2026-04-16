@@ -210,26 +210,51 @@ export function UserDetailBlock({ activities, dateRange }: { activities: UserAct
           {/* KPI row */}
           {kpis && (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {/* Total Atividades */}
               <div className="card-glass p-4 rounded-xl text-center">
                 <p className="text-muted-foreground text-xs mb-1">Total Atividades</p>
                 <p className="text-2xl font-bold text-foreground">{kpis.totalActivities.toLocaleString('pt-BR')}</p>
-                {periodComparison && (
-                  <span className={`text-[10px] ${periodComparison.pctChange >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                    {periodComparison.pctChange >= 0 ? '↑' : '↓'} {Math.abs(periodComparison.pctChange).toFixed(1)}% vs período anterior
-                  </span>
-                )}
-                {groupAvg && (
-                  <p className="text-[10px] text-muted-foreground">Média do grupo: {groupAvg.avg.toLocaleString('pt-BR')}</p>
-                )}
+                <div className="mt-1 space-y-0.5">
+                  {periodComparison && (
+                    <span className={`text-[10px] block ${periodComparison.pctChange >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                      {periodComparison.pctChange >= 0 ? '↑' : '↓'} {Math.abs(periodComparison.pctChange).toFixed(1)}% vs período anterior
+                    </span>
+                  )}
+                  {groupAvg && (() => {
+                    const diff = kpis.totalActivities - groupAvg.avg;
+                    const pct = groupAvg.avg > 0 ? ((diff / groupAvg.avg) * 100) : 0;
+                    return (
+                      <span className={`text-[10px] block ${pct >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                        {pct >= 0 ? '↑' : '↓'} {Math.abs(pct).toFixed(1)}% vs média do grupo ({groupAvg.avg.toLocaleString('pt-BR')})
+                      </span>
+                    );
+                  })()}
+                </div>
               </div>
+
+              {/* Média por Dia */}
+              <div className="card-glass p-4 rounded-xl text-center">
+                <p className="text-muted-foreground text-xs mb-1">Média por Dia</p>
+                <p className="text-2xl font-bold text-foreground">{kpis.avgPerDay.toFixed(1)}</p>
+                {groupAvg && kpis.activeDays > 0 && (() => {
+                  const groupAvgPerDay = groupAvg.avg / Math.max(kpis.activeDays, 1);
+                  const diff = kpis.avgPerDay - groupAvgPerDay;
+                  const pct = groupAvgPerDay > 0 ? ((diff / groupAvgPerDay) * 100) : 0;
+                  return (
+                    <span className={`text-[10px] block mt-1 ${pct >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                      {pct >= 0 ? '↑' : '↓'} {Math.abs(pct).toFixed(1)}% vs grupo
+                    </span>
+                  );
+                })()}
+              </div>
+
+              {/* Dias Ativos */}
               <div className="card-glass p-4 rounded-xl text-center">
                 <p className="text-muted-foreground text-xs mb-1">Dias Ativos</p>
                 <p className="text-2xl font-bold text-foreground">{kpis.activeDays.toLocaleString('pt-BR')}</p>
               </div>
-              <div className="card-glass p-4 rounded-xl text-center">
-                <p className="text-muted-foreground text-xs mb-1">Média por Dia</p>
-                <p className="text-2xl font-bold text-foreground">{kpis.avgPerDay.toFixed(1)}</p>
-              </div>
+
+              {/* Categoria Principal */}
               <div className="card-glass p-4 rounded-xl text-center">
                 <p className="text-muted-foreground text-xs mb-1">Categoria Principal</p>
                 <p className="text-lg font-bold text-foreground">{kpis.topCategory}</p>
