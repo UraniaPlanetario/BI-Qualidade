@@ -28,6 +28,7 @@ const AREAS: AreaConfig[] = [
       { id: 'qualidade', label: 'Qualidade', path: '/comercial/qualidade' },
       { id: 'monitoramento', label: 'Monitoramento Usuários', path: '/comercial/monitoramento' },
       { id: 'leads-fechados', label: 'Leads Fechados', path: '/comercial/leads-fechados' },
+      { id: 'campanhas', label: 'Campanhas Semanais', path: '/comercial/campanhas' },
     ],
   },
   { id: 'marketing', label: 'Marketing', icon: Megaphone, path: '/marketing' },
