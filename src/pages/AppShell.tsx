@@ -3,6 +3,7 @@ import { GlobalSidebar } from '@/components/layout/GlobalSidebar';
 import QualidadeDashboard from '@/areas/comercial/qualidade/pages/Dashboard';
 import Monitoramento from '@/areas/comercial/monitoramento/index';
 import LeadsFechados from '@/areas/comercial/leads-fechados/index';
+import Faturamento from '@/areas/financeiro/index';
 import AreaPlaceholder from '@/areas/placeholder';
 
 interface AppShellProps {
@@ -19,7 +20,7 @@ export default function AppShell({ onLogout }: AppShellProps) {
           <Route path="/comercial/monitoramento" element={<Monitoramento />} />
           <Route path="/comercial/leads-fechados" element={<LeadsFechados />} />
           <Route path="/marketing" element={<AreaPlaceholder title="Marketing" />} />
-          <Route path="/financeiro" element={<AreaPlaceholder title="Financeiro" />} />
+          <Route path="/financeiro" element={<Faturamento />} />
           <Route path="/onboarding" element={<AreaPlaceholder title="Onboarding" />} />
           <Route path="/tecnologia" element={<AreaPlaceholder title="Tecnologia" />} />
           <Route path="*" element={<Navigate to="/comercial/qualidade" replace />} />
