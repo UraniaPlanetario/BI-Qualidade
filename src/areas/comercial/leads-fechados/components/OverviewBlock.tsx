@@ -20,8 +20,7 @@ export function OverviewBlock({ leads }: { leads: LeadClosed[] }) {
     const ticketMedio = total > 0 ? receita / total : 0;
     const cancelados = leads.filter((l) => l.cancelado).length;
     const canceladosPct = total > 0 ? ((cancelados / total) * 100).toFixed(1) : '0.0';
-    const recorrentes = leads.filter((l) => l.occurrence > 1).length;
-    return { total, receita, ticketMedio, cancelados, canceladosPct, recorrentes };
+    return { total, receita, ticketMedio, cancelados, canceladosPct };
   }, [leads]);
 
   const byMonth = useMemo(() => {
@@ -55,27 +54,23 @@ export function OverviewBlock({ leads }: { leads: LeadClosed[] }) {
   return (
     <div className="space-y-6">
       {/* KPIs */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="card-glass p-4 rounded-xl text-center">
           <p className="text-sm text-muted-foreground">Total Fechados</p>
           <p className="text-3xl font-bold text-foreground">{stats.total.toLocaleString('pt-BR')}</p>
         </div>
         <div className="card-glass p-4 rounded-xl text-center">
           <p className="text-sm text-muted-foreground">Receita Total</p>
-          <p className="text-2xl font-bold text-foreground">{formatCurrency(stats.receita)}</p>
+          <p className="text-xl font-bold text-foreground">{formatCurrency(stats.receita)}</p>
         </div>
         <div className="card-glass p-4 rounded-xl text-center">
           <p className="text-sm text-muted-foreground">Ticket Médio</p>
-          <p className="text-2xl font-bold text-foreground">{formatCurrency(stats.ticketMedio)}</p>
+          <p className="text-xl font-bold text-foreground">{formatCurrency(stats.ticketMedio)}</p>
         </div>
         <div className="card-glass p-4 rounded-xl text-center">
           <p className="text-sm text-muted-foreground">Cancelados</p>
           <p className="text-3xl font-bold text-foreground">{stats.cancelados}</p>
           <p className="text-xs text-muted-foreground">{stats.canceladosPct}% do total</p>
-        </div>
-        <div className="card-glass p-4 rounded-xl text-center">
-          <p className="text-sm text-muted-foreground">Recorrentes</p>
-          <p className="text-3xl font-bold text-foreground">{stats.recorrentes}</p>
         </div>
       </div>
 
@@ -83,7 +78,7 @@ export function OverviewBlock({ leads }: { leads: LeadClosed[] }) {
       <div className="card-glass p-4 rounded-xl">
         <h3 className="text-base font-semibold text-foreground mb-4">Fechamentos por Mês</h3>
         <ResponsiveContainer width="100%" height={300}>
-          <BarChart data={byMonth} margin={{ left: 10, right: 10 }}>
+          <BarChart data={byMonth} margin={{ left: 10, right: 10, top: 20 }}>
             <XAxis dataKey="name" stroke="hsl(240, 5%, 65%)" tick={{ fill: 'hsl(240, 5%, 65%)', fontSize: 12 }} />
             <YAxis stroke="hsl(240, 5%, 65%)" tick={{ fill: 'hsl(240, 5%, 65%)', fontSize: 12 }} />
             <Tooltip {...TOOLTIP_STYLE} formatter={(value: number) => [value.toLocaleString('pt-BR'), 'Fechamentos']} />
@@ -102,7 +97,9 @@ export function OverviewBlock({ leads }: { leads: LeadClosed[] }) {
             <XAxis type="number" stroke="hsl(240, 5%, 65%)" tick={{ fill: 'hsl(240, 5%, 65%)', fontSize: 12 }} />
             <YAxis type="category" dataKey="name" stroke="hsl(240, 5%, 65%)" width={135} tick={{ fill: 'hsl(240, 5%, 65%)', fontSize: 12 }} />
             <Tooltip {...TOOLTIP_STYLE} formatter={(value: number) => [value.toLocaleString('pt-BR'), 'Leads']} />
-            <Bar dataKey="value" fill="hsl(45, 80%, 55%)" radius={[0, 4, 4, 0]} />
+            <Bar dataKey="value" fill="hsl(45, 80%, 55%)" radius={[0, 4, 4, 0]}>
+              <LabelList dataKey="value" position="right" fill="hsl(240, 5%, 65%)" fontSize={11} fontWeight={600} />
+            </Bar>
           </BarChart>
         </ResponsiveContainer>
       </div>

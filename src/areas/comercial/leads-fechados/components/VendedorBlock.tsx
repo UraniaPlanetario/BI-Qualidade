@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine, LabelList } from 'recharts';
 import { LeadClosed } from '../types';
 
 const TOOLTIP_STYLE = {
@@ -58,7 +58,9 @@ export function VendedorBlock({ leads }: { leads: LeadClosed[] }) {
             <YAxis type="category" dataKey="name" stroke="hsl(240, 5%, 65%)" width={135} tick={{ fill: 'hsl(240, 5%, 65%)', fontSize: 12 }} />
             <Tooltip {...TOOLTIP_STYLE} formatter={(value: number) => [value.toLocaleString('pt-BR'), 'Leads']} />
             <ReferenceLine x={avgLeads} stroke="hsl(0, 0%, 50%)" strokeDasharray="3 3" label={{ value: 'Média', fill: 'hsl(240, 5%, 65%)', fontSize: 11, position: 'top' }} />
-            <Bar dataKey="value" fill="hsl(263, 70%, 58%)" radius={[0, 4, 4, 0]} />
+            <Bar dataKey="value" fill="hsl(263, 70%, 58%)" radius={[0, 4, 4, 0]}>
+              <LabelList dataKey="value" position="right" fill="hsl(240, 5%, 65%)" fontSize={11} fontWeight={600} />
+            </Bar>
           </BarChart>
         </ResponsiveContainer>
       </div>

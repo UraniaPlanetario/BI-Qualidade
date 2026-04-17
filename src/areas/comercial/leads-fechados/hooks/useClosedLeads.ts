@@ -37,9 +37,16 @@ export function useFilteredClosed(leads: LeadClosed[], filters: ClosedFilters) {
       if (filters.cancelado === 'sim' && !l.cancelado) return false;
       if (filters.cancelado === 'nao' && l.cancelado) return false;
       const refDateStr = l.cancelado ? l.data_cancelamento_fmt : l.data_fechamento_fmt;
-      const refDate = refDateStr ? new Date(refDateStr) : new Date(l.entrada_onboarding_at);
-      if (filters.dateRange.from && refDate < filters.dateRange.from) return false;
-      if (filters.dateRange.to && refDate > filters.dateRange.to) return false;
+      if (!refDateStr) return false;
+      const ref = refDateStr.slice(0, 10); // YYYY-MM-DD string comparison
+      if (filters.dateRange.from) {
+        const fromStr = filters.dateRange.from.toISOString().slice(0, 10);
+        if (ref < fromStr) return false;
+      }
+      if (filters.dateRange.to) {
+        const toStr = filters.dateRange.to.toISOString().slice(0, 10);
+        if (ref > toStr) return false;
+      }
       return true;
     });
   }, [leads, filters]);
