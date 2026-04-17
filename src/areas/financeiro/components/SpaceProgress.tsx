@@ -125,13 +125,9 @@ export function SpaceProgress({ value, meta70, meta80, meta90, meta100 }: Props)
           <line x1="4" y1="8" x2="8" y2="5" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
         </g>
 
-        {/* Progress label (card) */}
-        <rect x="15" y="15" width="170" height="55" rx="8" fill="hsl(260, 30%, 15%)" stroke="hsl(260, 20%, 25%)" />
-        <text x="25" y="33" fill="hsl(240, 5%, 60%)" fontSize="10">Progresso da meta</text>
-        <text x="25" y="53" fill="white" fontSize="20" fontWeight="bold">{pct}%</text>
-        <text x="100" y="53" fill="hsl(263, 70%, 58%)" fontSize="10">
-          {formatCurrencyShort(value)} / {formatCurrencyShort(meta100)}
-        </text>
+        {/* Progress label (above rocket) */}
+        <rect x={rocketX - 30} y="58" width="60" height="24" rx="6" fill="hsl(260, 30%, 15%)" stroke="hsl(260, 20%, 25%)" />
+        <text x={rocketX} y="74" textAnchor="middle" fill="white" fontSize="12" fontWeight="bold">{pct}%</text>
       </svg>
     </div>
   );
