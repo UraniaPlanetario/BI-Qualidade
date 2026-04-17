@@ -38,14 +38,18 @@ export function useFilteredClosed(leads: LeadClosed[], filters: ClosedFilters) {
       if (filters.cancelado === 'nao' && l.cancelado) return false;
       const refDateStr = l.cancelado ? l.data_cancelamento_fmt : l.data_fechamento_fmt;
       if (!refDateStr) return false;
-      const ref = refDateStr.slice(0, 10); // YYYY-MM-DD string comparison
+      const ref = refDateStr.slice(0, 10); // YYYY-MM-DD
       if (filters.dateRange.from) {
-        const fromStr = filters.dateRange.from.toISOString().slice(0, 10);
-        if (ref < fromStr) return false;
+        const y = filters.dateRange.from.getFullYear();
+        const m = String(filters.dateRange.from.getMonth() + 1).padStart(2, '0');
+        const d = String(filters.dateRange.from.getDate()).padStart(2, '0');
+        if (ref < `${y}-${m}-${d}`) return false;
       }
       if (filters.dateRange.to) {
-        const toStr = filters.dateRange.to.toISOString().slice(0, 10);
-        if (ref > toStr) return false;
+        const y = filters.dateRange.to.getFullYear();
+        const m = String(filters.dateRange.to.getMonth() + 1).padStart(2, '0');
+        const d = String(filters.dateRange.to.getDate()).padStart(2, '0');
+        if (ref > `${y}-${m}-${d}`) return false;
       }
       return true;
     });

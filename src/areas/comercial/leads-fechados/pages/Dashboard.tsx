@@ -17,7 +17,10 @@ export default function LeadsFechadosDashboard() {
   const [filters, setFilters] = useState<ClosedFilters>({
     vendedores: [],
     cancelado: 'all',
-    dateRange: { from: null, to: null },
+    dateRange: {
+      from: new Date(new Date().getFullYear(), 0, 1),
+      to: new Date(),
+    },
   });
 
   const { data: leads = [], isLoading, error } = useClosedLeads();
