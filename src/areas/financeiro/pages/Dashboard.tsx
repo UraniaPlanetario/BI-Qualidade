@@ -46,7 +46,7 @@ export default function FaturamentoDashboard() {
     <div>
       <div className="mb-4">
         <h1 className="text-2xl font-bold text-foreground">Faturamento {currentYear}</h1>
-        <p className="text-sm text-muted-foreground mt-1">Acompanhamento anual de receita vs metas</p>
+        <p className="text-sm text-muted-foreground mt-1">Acompanhamento anual de receita por data de agendamento vs metas</p>
       </div>
 
       <div className="max-w-6xl space-y-6">
