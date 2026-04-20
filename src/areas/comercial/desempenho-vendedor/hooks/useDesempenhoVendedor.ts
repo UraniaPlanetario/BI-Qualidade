@@ -87,7 +87,9 @@ export function useAlteracoesCampos(dateFrom: string | null, dateTo: string | nu
           .schema('gold')
           .from('cubo_alteracao_campos_eventos')
           .select('lead_id, criado_por_id, criado_por, data_criacao, dentro_janela')
-          .eq('dentro_janela', true);
+          .eq('dentro_janela', true)
+          // Excluir campo "Etapa do funil" (851177) - atualizado automaticamente pelo CRM
+          .neq('campo_id', 851177);
         if (dateFrom) query = query.gte('data_criacao', dateFrom);
         if (dateTo) query = query.lte('data_criacao', dateTo + 'T23:59:59');
         const { data, error } = await query.range(from, from + pageSize - 1);

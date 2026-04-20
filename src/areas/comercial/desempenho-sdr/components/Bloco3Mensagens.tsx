@@ -147,22 +147,18 @@ export function Bloco3Mensagens({ mensagens, sdrs, metas, dateFrom, dateTo }: Pr
     return rows.sort((a, b) => b.media - a.media);
   }, [filtered]);
 
-  // 3.5 — Média de mensagens por lead por SDR (usar talk_id como proxy — não temos, usamos responder_user_id + received_at date como proxy-agrupamento
-  // Since no talk_id, use proxy: count of distinct "talks" by responder_user_name + date → messages per "talk"
-  // Actually instruction says use talk_id as proxy but it's not in type. Use date+sdr bucket as proxy
+  // 3.5 — Média de mensagens por lead por SDR (total mensagens / leads distintos)
   const mensagensPorLeadPorSdr = useMemo(() => {
-    const sdrData: Record<string, { total: number; talks: Set<string> }> = {};
+    const sdrData: Record<string, { total: number; leads: Set<number> }> = {};
     for (const m of filtered) {
       const name = m.responder_user_name!;
-      // proxy de "talk": sdr + data
-      const talkKey = `${name}|${toLocalDateKey(new Date(m.received_at))}`;
-      if (!sdrData[name]) sdrData[name] = { total: 0, talks: new Set() };
+      if (!sdrData[name]) sdrData[name] = { total: 0, leads: new Set() };
       sdrData[name].total += 1;
-      sdrData[name].talks.add(talkKey);
+      if (m.lead_id != null) sdrData[name].leads.add(m.lead_id);
     }
     const rows = Object.entries(sdrData).map(([sdr, d]) => ({
       sdr,
-      media: d.talks.size > 0 ? d.total / d.talks.size : 0,
+      media: d.leads.size > 0 ? d.total / d.leads.size : 0,
     }));
     return rows.sort((a, b) => b.media - a.media);
   }, [filtered]);

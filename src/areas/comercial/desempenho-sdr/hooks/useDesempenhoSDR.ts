@@ -83,7 +83,7 @@ export function useMensagensSDR(dateFrom: string | null, dateTo: string | null) 
         let q = supabase
           .schema('gold')
           .from('tempo_resposta_mensagens')
-          .select('responder_user_id, responder_user_name, received_at, responded_at, response_minutes, faixa')
+          .select('responder_user_id, responder_user_name, received_at, responded_at, response_minutes, faixa, lead_id')
           .eq('recebida_dentro_janela', true);
         if (dateFrom) q = q.gte('received_at', dateFrom);
         if (dateTo) q = q.lte('received_at', dateTo + 'T23:59:59');
@@ -111,8 +111,10 @@ export function useAlteracoesSDR(dateFrom: string | null, dateTo: string | null)
         let q = supabase
           .schema('gold')
           .from('cubo_alteracao_campos_eventos')
-          .select('lead_id, criado_por_id, criado_por, data_criacao, dentro_janela')
-          .eq('dentro_janela', true);
+          .select('lead_id, criado_por_id, criado_por, data_criacao, dentro_janela, campo_id')
+          .eq('dentro_janela', true)
+          // Excluir campo "Etapa do funil" (851177) - atualizado automaticamente pelo CRM
+          .neq('campo_id', 851177);
         if (dateFrom) q = q.gte('data_criacao', dateFrom);
         if (dateTo) q = q.lte('data_criacao', dateTo + 'T23:59:59');
         const { data, error } = await q.range(from, from + pageSize - 1);

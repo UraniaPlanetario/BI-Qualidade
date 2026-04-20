@@ -29,6 +29,7 @@ export interface MensagemSDR {
   responded_at: string;
   response_minutes: number;
   faixa: string;
+  lead_id: number | null;
 }
 
 export interface AlteracaoSDR {

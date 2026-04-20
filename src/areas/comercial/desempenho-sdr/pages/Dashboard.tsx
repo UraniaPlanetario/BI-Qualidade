@@ -476,14 +476,18 @@ export default function DesempenhoSDRDashboard() {
   const error =
     errorSdrs || errorMetas || errorMults || errorMensagens || errorAlteracoes || errorMovimentos;
 
-  // Lista de SDRs disponíveis
-  const sdrsDisponiveis = useMemo(() => sdrs.map((s) => s.nome).sort(), [sdrs]);
+  // Lista de SDRs disponíveis (apenas ativos)
+  const sdrsDisponiveis = useMemo(
+    () => sdrs.filter((s) => s.ativo).map((s) => s.nome).sort(),
+    [sdrs],
+  );
 
-  // Filtra SDRs ativos conforme filtro de usuário
+  // Filtra SDRs ativos conforme filtro de usuário (sempre só ativos)
   const filteredSdrs = useMemo(() => {
-    if (filters.sdrs.length === 0) return sdrs;
+    const activeOnly = sdrs.filter((s) => s.ativo);
+    if (filters.sdrs.length === 0) return activeOnly;
     const set = new Set(filters.sdrs);
-    return sdrs.filter((s) => set.has(s.nome));
+    return activeOnly.filter((s) => set.has(s.nome));
   }, [sdrs, filters.sdrs]);
 
   const dateFrom = filters.dateRange.from ?? startOfMonth(today);

@@ -51,11 +51,14 @@ export function Bloco5Qualificacao({ movimentos, sdrs }: Props) {
     });
   }, [movimentos]);
 
+  // Leads qualificados que TAMBÉM foram recebidos no mesmo período (evita taxa > 100%)
   const leadsQualificados = useMemo(() => {
     const set = new Set<number>();
-    for (const m of movimentosQualificacao) set.add(m.lead_id);
+    for (const m of movimentosQualificacao) {
+      if (leadsRecebidos.has(m.lead_id)) set.add(m.lead_id);
+    }
     return set;
-  }, [movimentosQualificacao]);
+  }, [movimentosQualificacao, leadsRecebidos]);
 
   // 5.1 KPI taxa de qualificação
   const taxaQualificacao = useMemo(() => {
@@ -80,6 +83,8 @@ export function Bloco5Qualificacao({ movimentos, sdrs }: Props) {
     for (const m of movimentosQualificacao) {
       const sdr = m.moved_by;
       if (!sdr || !sdrNames.has(sdr)) continue;
+      // Só conta se o lead foi recebido no período
+      if (!leadsRecebidos.has(m.lead_id)) continue;
       if (!qualPorSdr[sdr]) qualPorSdr[sdr] = new Set();
       qualPorSdr[sdr].add(m.lead_id);
     }
@@ -105,11 +110,13 @@ export function Bloco5Qualificacao({ movimentos, sdrs }: Props) {
         recebidosPorMes[key].add(m.lead_id);
       }
     }
-    // Qualificados por mês
+    // Qualificados por mês (apenas dos que foram recebidos no mesmo mês)
     const qualificadosPorMes: Record<string, Set<number>> = {};
     for (const m of movimentosQualificacao) {
       const d = new Date(m.moved_at);
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      // Só conta se o lead foi recebido no mesmo mês
+      if (!recebidosPorMes[key]?.has(m.lead_id)) continue;
       if (!qualificadosPorMes[key]) qualificadosPorMes[key] = new Set();
       qualificadosPorMes[key].add(m.lead_id);
     }
