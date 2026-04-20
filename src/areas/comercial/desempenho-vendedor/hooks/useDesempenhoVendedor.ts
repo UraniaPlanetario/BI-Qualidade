@@ -106,8 +106,10 @@ export function useAlteracoesCampos(dateFrom: string | null, dateTo: string | nu
           .from('cubo_alteracao_campos_eventos')
           .select('lead_id, criado_por_id, criado_por, data_criacao, dentro_janela')
           .eq('dentro_janela', true)
-          // Excluir campo "Etapa do funil" (851177) - atualizado automaticamente pelo CRM
-          .neq('campo_id', 851177);
+          // Excluir campos atualizados automaticamente (bots/integrações), não ações de vendedor:
+          // 851177 Etapa do funil, 850685 Parar IA Whatsapp, 850687 Parar IA Instagram,
+          // 853875 Origem da oportunidade, 849769 Canal de entrada, 586018 tracking
+          .not('campo_id', 'in', '(851177,850685,850687,853875,849769,586018)');
         if (dateFrom) query = query.gte('data_criacao', dateFrom);
         if (dateTo) query = query.lte('data_criacao', dateTo + 'T23:59:59');
         const { data, error } = await query.range(from, from + pageSize - 1);
