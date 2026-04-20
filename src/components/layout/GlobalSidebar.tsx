@@ -29,6 +29,7 @@ const AREAS: AreaConfig[] = [
       { id: 'monitoramento', label: 'Monitoramento Usuários', path: '/comercial/monitoramento' },
       { id: 'leads-fechados', label: 'Leads Fechados', path: '/comercial/leads-fechados' },
       { id: 'campanhas', label: 'Campanhas Semanais', path: '/comercial/campanhas' },
+      { id: 'desempenho-vendedor', label: 'Desempenho Vendedor', path: '/comercial/desempenho-vendedor' },
     ],
   },
   { id: 'marketing', label: 'Marketing', icon: Megaphone, path: '/marketing' },

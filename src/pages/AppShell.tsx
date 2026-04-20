@@ -4,6 +4,7 @@ import QualidadeDashboard from '@/areas/comercial/qualidade/pages/Dashboard';
 import Monitoramento from '@/areas/comercial/monitoramento/index';
 import LeadsFechados from '@/areas/comercial/leads-fechados/index';
 import Campanhas from '@/areas/comercial/campanhas/index';
+import DesempenhoVendedor from '@/areas/comercial/desempenho-vendedor/index';
 import Faturamento from '@/areas/financeiro/index';
 import AreaPlaceholder from '@/areas/placeholder';
 
@@ -21,6 +22,7 @@ export default function AppShell({ onLogout }: AppShellProps) {
           <Route path="/comercial/monitoramento" element={<Monitoramento />} />
           <Route path="/comercial/leads-fechados" element={<LeadsFechados />} />
           <Route path="/comercial/campanhas" element={<Campanhas />} />
+          <Route path="/comercial/desempenho-vendedor" element={<DesempenhoVendedor />} />
           <Route path="/marketing" element={<AreaPlaceholder title="Marketing" />} />
           <Route path="/financeiro" element={<Faturamento />} />
           <Route path="/onboarding" element={<AreaPlaceholder title="Onboarding" />} />
