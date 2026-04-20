@@ -35,18 +35,25 @@ const AREAS: AreaConfig[] = [
     path: '/comercial',
     children: [
       {
-        id: 'qualidade-comercial',
-        label: 'Qualidade Comercial',
-        path: '/comercial/qualidade-comercial',
+        id: 'qualidade-grp',
+        label: 'Qualidade',
+        path: '/comercial/qualidade-grp',
         children: [
-          { id: 'qualidade', label: 'Qualidade', path: '/comercial/qualidade' },
-          { id: 'monitoramento', label: 'Monitoramento Usuários', path: '/comercial/monitoramento' },
+          { id: 'qualidade', label: 'Qualidade de Fechamento', path: '/comercial/qualidade' },
+          { id: 'monitoramento', label: 'Monitoramento de Usuário', path: '/comercial/monitoramento' },
         ],
       },
-      { id: 'leads-fechados', label: 'Leads Fechados', path: '/comercial/leads-fechados' },
+      {
+        id: 'desempenho-grp',
+        label: 'Desempenho',
+        path: '/comercial/desempenho-grp',
+        children: [
+          { id: 'desempenho-vendedor', label: 'Desempenho Vendedores', path: '/comercial/desempenho-vendedor' },
+          { id: 'desempenho-sdr', label: 'Desempenho SDR', path: '/comercial/desempenho-sdr' },
+        ],
+      },
       { id: 'campanhas', label: 'Campanhas Semanais', path: '/comercial/campanhas' },
-      { id: 'desempenho-vendedor', label: 'Desempenho Vendedor', path: '/comercial/desempenho-vendedor' },
-      { id: 'desempenho-sdr', label: 'Desempenho SDR', path: '/comercial/desempenho-sdr' },
+      { id: 'leads-fechados', label: 'Leads Fechados', path: '/comercial/leads-fechados' },
     ],
   },
   { id: 'marketing', label: 'Marketing', icon: Megaphone, path: '/marketing' },
@@ -79,7 +86,8 @@ export function GlobalSidebar({ onLogout }: GlobalSidebarProps) {
   const { data: profile } = useUserProfile();
   const [expanded, setExpanded] = useState<Record<string, boolean>>({
     comercial: true,
-    'qualidade-comercial': true,
+    'qualidade-grp': true,
+    'desempenho-grp': true,
   });
 
   const roles = profile?.roles ?? [];
