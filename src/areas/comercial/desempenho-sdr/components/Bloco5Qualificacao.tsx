@@ -13,7 +13,7 @@ import {
   Legend,
   CartesianGrid,
 } from 'recharts';
-import { MovimentoLead, SDR, formatNumber, formatPct } from '../types';
+import { MovimentoLead, SDR, formatNumber, formatPct, isQualificadoSDRById } from '../types';
 import { TOOLTIP_STYLE, COLORS } from './_helpers';
 
 interface Props {
@@ -24,11 +24,6 @@ interface Props {
 
 const RECEPCAO = 'Recepção Leads Insta';
 const VENDAS_WPP = 'Vendas WhatsApp';
-
-function isQualificadoSDR(status?: string | null): boolean {
-  if (!status) return false;
-  return status.toLowerCase().startsWith('qualificado sdr');
-}
 
 export function Bloco5Qualificacao({ movimentos, sdrs }: Props) {
   const sdrNames = useMemo(() => new Set(sdrs.map((s) => s.nome)), [sdrs]);
@@ -42,11 +37,12 @@ export function Bloco5Qualificacao({ movimentos, sdrs }: Props) {
     return set;
   }, [movimentos]);
 
-  // Movimentos de qualificação: transição RECEPCAO -> VENDAS_WPP OU status_to começa com "Qualificado SDR"
+  // Movimentos de qualificação: transição RECEPCAO -> VENDAS_WPP OU status_to_id é
+  // etapa de qualificação pelo SDR (ver QUALIFICADO_SDR_STATUS_IDS em types.ts)
   const movimentosQualificacao = useMemo(() => {
     return movimentos.filter((m) => {
       const movedFromRec = m.pipeline_from === RECEPCAO && m.pipeline_to === VENDAS_WPP;
-      const isQual = isQualificadoSDR(m.status_to);
+      const isQual = isQualificadoSDRById(m.status_to_id);
       return movedFromRec || isQual;
     });
   }, [movimentos]);
@@ -146,7 +142,8 @@ export function Bloco5Qualificacao({ movimentos, sdrs }: Props) {
         </h2>
         <p className="text-xs text-muted-foreground mb-4">
           Leads qualificados = movidos de "Recepção Leads Insta" para "Vendas WhatsApp" ou
-          passaram pela etapa "Qualificado SDR"
+          passaram pela etapa de qualificação do SDR em Vendas WhatsApp (identificada por{' '}
+          <code>status_id</code> para ficar imune a renames).
         </p>
       </div>
 

@@ -216,7 +216,12 @@ Implementação em `Bloco1Geral.tsx` e `Bloco5Qualificacao.tsx` ([src/areas/come
 
 **Numerador (leads qualificados):** leads que, no período, tiveram um movimento em `gold.leads_movements` **movido pelo SDR em questão**, onde:
 - `pipeline_from = 'Recepção Leads Insta' AND pipeline_to = 'Vendas WhatsApp'`, OU
-- `status_to` começa com `'Qualificado SDR'` (função `isQualificadoSDR` em [desempenho-sdr/types.ts](../src/areas/comercial/desempenho-sdr/types.ts))
+- `status_to_id ∈ QUALIFICADO_SDR_STATUS_IDS` — helper `isQualificadoSDRById()` em [desempenho-sdr/types.ts](../src/areas/comercial/desempenho-sdr/types.ts)
+
+**Por que `status_to_id` e não `status_to` (nome)?** Para ficar imune a rename de etapa no Kommo. O ID é estável; se a etapa "Qualificado SDR" for renomeada para "Lead Pré-Qualificado (SDR)" (ou qualquer outro nome), nada quebra. Se o time criar uma **nova etapa separada**, basta adicionar o novo ID ao `QUALIFICADO_SDR_STATUS_IDS`.
+
+**IDs mapeados hoje:**
+- `100952455` — "Qualificado SDR" no pipeline Vendas WhatsApp (único status de qualificação humana pelo SDR)
 
 **Denominador (leads recebidos):** IDs únicos de leads que entraram em `Recepção Leads Insta` no período (qualquer movimento `pipeline_to = 'Recepção Leads Insta'` em `leads_movements`).
 

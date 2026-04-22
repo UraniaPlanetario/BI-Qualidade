@@ -22,6 +22,7 @@ import {
   calcMultiplicador,
   formatPct,
   formatCurrency,
+  isQualificadoSDRById,
 } from '../types';
 import { TOOLTIP_STYLE, COLORS, getActiveSdrs, toLocalDateKey } from './_helpers';
 
@@ -38,11 +39,6 @@ interface Props {
 
 const RECEPCAO = 'Recepção Leads Insta';
 const VENDAS_WPP = 'Vendas WhatsApp';
-
-function isQualificadoSDR(status?: string | null): boolean {
-  if (!status) return false;
-  return status.toLowerCase().startsWith('qualificado sdr');
-}
 
 interface SdrPerformance {
   sdr: string;
@@ -123,7 +119,7 @@ export function Bloco1Geral({
       for (const mov of movimentos) {
         const movedFromRec =
           mov.pipeline_from === RECEPCAO && mov.pipeline_to === VENDAS_WPP;
-        const isQual = isQualificadoSDR(mov.status_to);
+        const isQual = isQualificadoSDRById(mov.status_to_id);
         if ((movedFromRec || isQual) && mov.moved_by === sdr.nome) {
           qualificadosSdr.add(mov.lead_id);
         }

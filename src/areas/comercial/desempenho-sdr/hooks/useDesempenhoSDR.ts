@@ -139,7 +139,7 @@ export function useMovimentosSDR(dateFrom: string | null, dateTo: string | null)
         let q = supabase
           .schema('gold')
           .from('leads_movements')
-          .select('lead_id, pipeline_from, pipeline_to, status_to, moved_by, moved_by_id, moved_at');
+          .select('lead_id, pipeline_from, pipeline_to, status_to, status_to_id, moved_by, moved_by_id, moved_at');
         if (dateFrom) q = q.gte('moved_at', dateFrom);
         if (dateTo) q = q.lte('moved_at', dateTo + 'T23:59:59');
         const { data, error } = await q.range(from, from + pageSize - 1);

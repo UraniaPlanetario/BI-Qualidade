@@ -45,9 +45,25 @@ export interface MovimentoLead {
   pipeline_from: string | null;
   pipeline_to: string | null;
   status_to: string | null;
+  status_to_id: number | null;
   moved_by: string | null;
   moved_by_id: number | null;
   moved_at: string;
+}
+
+/**
+ * Status IDs do pipeline "Vendas WhatsApp" que representam qualificação pelo SDR.
+ * Usamos IDs (não nomes) para ficar imune a rename de etapa no Kommo.
+ *
+ * - 100952455: "Qualificado SDR" (pode virar "Lead Pré-Qualificado (SDR)" num rename futuro)
+ *
+ * Se o time criar uma NOVA etapa separada em vez de renomear, adicione o novo ID aqui.
+ */
+export const QUALIFICADO_SDR_STATUS_IDS = new Set<number>([100952455]);
+
+export function isQualificadoSDRById(statusId: number | null | undefined): boolean {
+  if (statusId == null) return false;
+  return QUALIFICADO_SDR_STATUS_IDS.has(statusId);
 }
 
 export interface SDRFilters {
