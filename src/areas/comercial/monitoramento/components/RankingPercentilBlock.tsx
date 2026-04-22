@@ -43,6 +43,7 @@ const FAIXA_COLORS: Record<Row['faixa'], string> = {
 
 interface Props {
   activities: UserActivity[];
+  selectedUsers: string[];
   dateRange: { from: Date; to: Date };
 }
 
@@ -50,7 +51,7 @@ function toDateStr(d: Date): string {
   return d.toISOString().split('T')[0];
 }
 
-export function RankingPercentilBlock({ activities, dateRange }: Props) {
+export function RankingPercentilBlock({ activities, selectedUsers, dateRange }: Props) {
   const fromStr = toDateStr(dateRange.from);
   const toStr = toDateStr(dateRange.to);
   const { data: consultores = [], isLoading: loadingUsers } = useActiveConsultores();
@@ -111,7 +112,13 @@ export function RankingPercentilBlock({ activities, dateRange }: Props) {
     );
   }
 
-  const chartData = rows.map((r) => ({
+  const displayedRows = useMemo(() => {
+    if (selectedUsers.length === 0) return rows;
+    const set = new Set(selectedUsers);
+    return rows.filter((r) => set.has(r.user_name));
+  }, [rows, selectedUsers]);
+
+  const chartData = displayedRows.map((r) => ({
     name: r.user_name,
     value: r.acoes_por_lead,
     faixa: r.faixa,
@@ -216,7 +223,7 @@ export function RankingPercentilBlock({ activities, dateRange }: Props) {
             </tr>
           </thead>
           <tbody>
-            {rows.map((r) => (
+            {displayedRows.map((r) => (
               <tr
                 key={r.user_id}
                 className="border-b border-border/50 hover:bg-secondary/30 transition-colors"

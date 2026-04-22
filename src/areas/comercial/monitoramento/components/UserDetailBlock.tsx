@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
+import { AlertCircle } from 'lucide-react';
 import { UserActivity, CATEGORY_COLORS } from '../types';
 import { getISOWeek, getISOWeekYear, parseISO, startOfISOWeek, endOfISOWeek, format, differenceInDays, subDays } from 'date-fns';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, ReferenceLine } from 'recharts';
@@ -10,16 +11,14 @@ const TOOLTIP_STYLE = {
 
 const EXCLUDED_CATEGORIES = new Set(['Tag', 'Vinculacao']);
 
-export function UserDetailBlock({ activities, dateRange }: { activities: UserActivity[]; dateRange: { from: Date; to: Date } }) {
-  const [selectedUser, setSelectedUser] = useState<string>('');
+interface Props {
+  activities: UserActivity[];
+  selectedUsers: string[];
+  dateRange: { from: Date; to: Date };
+}
 
-  const userNames = useMemo(
-    () =>
-      Array.from(new Set(activities.map((a) => a.user_name)))
-        .filter(Boolean)
-        .sort((a, b) => a.localeCompare(b)),
-    [activities],
-  );
+export function UserDetailBlock({ activities, selectedUsers, dateRange }: Props) {
+  const selectedUser = selectedUsers.length === 1 ? selectedUsers[0] : '';
 
   const filtered = useMemo(
     () =>
@@ -189,26 +188,22 @@ export function UserDetailBlock({ activities, dateRange }: { activities: UserAct
       .map(([category, count]) => ({ category, count }));
   }, [filtered]);
 
+  const multipleSelected = selectedUsers.length > 1;
+  const noneSelected = selectedUsers.length === 0;
+
   return (
     <div className="space-y-6">
-      {/* User selector */}
-      <div>
-        <select
-          className="w-full max-w-xs px-2 py-1.5 rounded-lg bg-secondary border border-border text-sm text-foreground"
-          value={selectedUser}
-          onChange={(e) => setSelectedUser(e.target.value)}
-        >
-          <option value="">Selecione um usuário</option>
-          {userNames.map((name) => (
-            <option key={name} value={name}>
-              {name}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {!selectedUser ? (
-        <p className="text-muted-foreground text-sm">Selecione um usuário para ver o detalhamento</p>
+      {(multipleSelected || noneSelected) ? (
+        <div className="card-glass p-6 rounded-xl flex items-start gap-3">
+          <AlertCircle className="text-primary flex-shrink-0 mt-0.5" size={20} />
+          <div>
+            <p className="text-sm font-medium text-foreground">
+              {multipleSelected
+                ? `Para a análise individual, precisa deixar apenas 1 seleção no filtro de Usuário (atualmente ${selectedUsers.length} selecionados).`
+                : 'Para a análise individual, selecione 1 usuário no filtro de Usuário acima.'}
+            </p>
+          </div>
+        </div>
       ) : (
         <>
           {/* KPI row */}

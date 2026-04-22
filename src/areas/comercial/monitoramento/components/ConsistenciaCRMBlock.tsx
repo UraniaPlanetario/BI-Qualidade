@@ -1,16 +1,24 @@
 import { useMemo } from 'react';
 import { Loader2, Info } from 'lucide-react';
 import {
+  ScatterChart,
+  Scatter,
+  XAxis,
+  YAxis,
+  ZAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Cell,
+} from 'recharts';
+import {
   useActiveConsultores,
-  useOpenLeads,
   useClosedLeadsPeriodo,
-  useOpenTasks,
   useCamposAlteradosFiltered,
   useLeadsAtribuidosPeriodo,
 } from '../hooks/useConsistenciaData';
 import {
   UserActivity,
-  FIM_FUNIL_ESTAGIOS,
   ConsistenciaVendedor,
   classifyConsistencia,
   CLASSIFICACAO_COLORS,
@@ -19,46 +27,49 @@ import {
 
 const EXCLUDED_CATEGORIES = new Set(['Tag', 'Vinculacao', 'Outros', 'Campo alterado']);
 
+const TOOLTIP_STYLE = {
+  contentStyle: { backgroundColor: 'hsl(240, 10%, 10%)', border: 'none', borderRadius: 8 },
+  itemStyle: { color: '#fff' },
+};
+
+const CLASSIFICACAO_ORDER: ClassificacaoCRM[] = [
+  'Extremamente Baixa',
+  'Baixa',
+  'Moderada',
+  'Boa',
+];
+
+const CLASSIFICACAO_NUM: Record<ClassificacaoCRM, number> = {
+  'Extremamente Baixa': 1,
+  'Baixa': 2,
+  'Moderada': 3,
+  'Boa': 4,
+};
+
 function toDateStr(d: Date): string {
   return d.toISOString().split('T')[0];
 }
 
 interface Props {
   activities: UserActivity[];
+  selectedUsers: string[];
   dateRange: { from: Date; to: Date };
 }
 
-export function ConsistenciaCRMBlock({ activities, dateRange }: Props) {
+export function ConsistenciaCRMBlock({ activities, selectedUsers, dateRange }: Props) {
   const fromStr = toDateStr(dateRange.from);
   const toStr = toDateStr(dateRange.to);
 
   const { data: consultores = [], isLoading: loadingUsers } = useActiveConsultores();
-  const { data: openLeads = [], isLoading: loadingLeads } = useOpenLeads();
   const { data: closedLeads = [], isLoading: loadingClosed } = useClosedLeadsPeriodo(fromStr, toStr);
-  const { data: openTasks = [], isLoading: loadingTasks } = useOpenTasks();
   const { data: camposFiltered = {}, isLoading: loadingCampos } = useCamposAlteradosFiltered(fromStr, toStr);
   const { data: leadsAtribuidos = {}, isLoading: loadingAtrib } = useLeadsAtribuidosPeriodo(fromStr, toStr);
 
-  const rows = useMemo<ConsistenciaVendedor[]>(() => {
+  const allRows = useMemo<ConsistenciaVendedor[]>(() => {
     if (consultores.length === 0) return [];
 
     const idByName = new Map<string, number>();
     for (const u of consultores) idByName.set(u.name, u.id);
-
-    const leadsPorVendedor = new Map<number, { total: number; fimFunilIds: Set<number> }>();
-    for (const u of consultores) {
-      leadsPorVendedor.set(u.id, { total: 0, fimFunilIds: new Set() });
-    }
-    for (const l of openLeads) {
-      if (!l.vendedor) continue;
-      const uid = idByName.get(l.vendedor);
-      if (uid == null) continue;
-      const bucket = leadsPorVendedor.get(uid)!;
-      bucket.total += 1;
-      if (l.estagio_atual && FIM_FUNIL_ESTAGIOS.includes(l.estagio_atual)) {
-        bucket.fimFunilIds.add(l.id_lead);
-      }
-    }
 
     const closedCount = new Map<number, number>();
     for (const c of closedLeads) {
@@ -68,35 +79,10 @@ export function ConsistenciaCRMBlock({ activities, dateRange }: Props) {
       closedCount.set(uid, (closedCount.get(uid) || 0) + 1);
     }
 
-    const tasksPorVendedor = new Map<
-      number,
-      { overdue: number; leadsWithTask: Set<number>; leadsOverdueTask: Set<number> }
-    >();
-    for (const u of consultores) {
-      tasksPorVendedor.set(u.id, {
-        overdue: 0,
-        leadsWithTask: new Set(),
-        leadsOverdueTask: new Set(),
-      });
-    }
-    const now = Date.now();
-    for (const t of openTasks) {
-      if (t.responsible_user_id == null) continue;
-      const bucket = tasksPorVendedor.get(t.responsible_user_id);
-      if (!bucket) continue;
-      if (t.entity_id != null) bucket.leadsWithTask.add(t.entity_id);
-      const completeMs = t.complete_till ? new Date(t.complete_till).getTime() : null;
-      if (completeMs != null && completeMs < now) {
-        bucket.overdue += 1;
-        if (t.entity_id != null) bucket.leadsOverdueTask.add(t.entity_id);
-      }
-    }
-
     const acoesPorVendedor = new Map<number, number>();
     for (const a of activities) {
       if (EXCLUDED_CATEGORIES.has(a.category)) continue;
-      const uid = a.user_id;
-      acoesPorVendedor.set(uid, (acoesPorVendedor.get(uid) || 0) + a.activity_count);
+      acoesPorVendedor.set(a.user_id, (acoesPorVendedor.get(a.user_id) || 0) + a.activity_count);
     }
     for (const [uidStr, count] of Object.entries(camposFiltered)) {
       const uid = Number(uidStr);
@@ -105,20 +91,6 @@ export function ConsistenciaCRMBlock({ activities, dateRange }: Props) {
 
     const out: ConsistenciaVendedor[] = [];
     for (const u of consultores) {
-      const leadsBucket = leadsPorVendedor.get(u.id)!;
-      const tasksBucket = tasksPorVendedor.get(u.id)!;
-      const openLeadIds = new Set<number>();
-      for (const l of openLeads) {
-        if (l.vendedor && idByName.get(l.vendedor) === u.id) openLeadIds.add(l.id_lead);
-      }
-      let semTarefa = 0;
-      for (const lid of openLeadIds) {
-        if (!tasksBucket.leadsWithTask.has(lid)) semTarefa += 1;
-      }
-      let atrasoFimFunil = 0;
-      for (const lid of leadsBucket.fimFunilIds) {
-        if (tasksBucket.leadsOverdueTask.has(lid)) atrasoFimFunil += 1;
-      }
       const acoes = acoesPorVendedor.get(u.id) || 0;
       const leadsPeriodo = leadsAtribuidos[u.id] || 0;
       const acoesPorLead = leadsPeriodo > 0 ? acoes / leadsPeriodo : 0;
@@ -126,18 +98,24 @@ export function ConsistenciaCRMBlock({ activities, dateRange }: Props) {
         user_id: u.id,
         user_name: u.name,
         leads_no_periodo: leadsPeriodo,
-        leads_abertos_atual: leadsBucket.total,
+        leads_abertos_atual: 0,
         leads_fechados_periodo: closedCount.get(u.id) || 0,
-        tarefas_em_atraso: tasksBucket.overdue,
-        sem_tarefa: semTarefa,
-        atraso_fim_funil: atrasoFimFunil,
+        tarefas_em_atraso: 0,
+        sem_tarefa: 0,
+        atraso_fim_funil: 0,
         acoes_periodo: acoes,
         acoes_por_lead: acoesPorLead,
         classificacao: classifyConsistencia(acoesPorLead),
       });
     }
     return out.sort((a, b) => b.acoes_por_lead - a.acoes_por_lead);
-  }, [consultores, openLeads, closedLeads, openTasks, activities, camposFiltered, leadsAtribuidos]);
+  }, [consultores, closedLeads, activities, camposFiltered, leadsAtribuidos]);
+
+  const rows = useMemo(() => {
+    if (selectedUsers.length === 0) return allRows;
+    const set = new Set(selectedUsers);
+    return allRows.filter((r) => set.has(r.user_name));
+  }, [allRows, selectedUsers]);
 
   const summary = useMemo(() => {
     const counts: Record<ClassificacaoCRM, number> = {
@@ -150,7 +128,7 @@ export function ConsistenciaCRMBlock({ activities, dateRange }: Props) {
     return counts;
   }, [rows]);
 
-  const loading = loadingUsers || loadingLeads || loadingClosed || loadingTasks || loadingCampos || loadingAtrib;
+  const loading = loadingUsers || loadingClosed || loadingCampos || loadingAtrib;
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -158,6 +136,15 @@ export function ConsistenciaCRMBlock({ activities, dateRange }: Props) {
       </div>
     );
   }
+
+  const scatterData = rows.map((r) => ({
+    name: r.user_name,
+    leads: r.leads_no_periodo,
+    fechamentos: r.leads_fechados_periodo,
+    classificacao: r.classificacao,
+    classificacaoNum: CLASSIFICACAO_NUM[r.classificacao],
+    fill: CLASSIFICACAO_COLORS[r.classificacao],
+  }));
 
   return (
     <div className="space-y-6">
@@ -202,11 +189,6 @@ export function ConsistenciaCRMBlock({ activities, dateRange }: Props) {
                 &lt; 0,7
               </li>
             </ul>
-            <p className="mt-2 text-xs">
-              "Leads Abertos (atual)", tarefas em atraso, sem tarefa e atraso em fim de funil
-              (Negociação, Geladeira, Venda provável, Falar com Direção/Decisor) são{' '}
-              <em>snapshot do momento atual</em> — informativos, fora do score.
-            </p>
             <p className="mt-1 text-xs">
               Ações contadas: mensagens, movimentações, ligações, notas, tarefas e campos alterados
               (excluindo 6 campos automatizados por bots: Etapa do funil, Parar IA WhatsApp/Instagram,
@@ -239,11 +221,7 @@ export function ConsistenciaCRMBlock({ activities, dateRange }: Props) {
             <tr className="border-b border-border text-muted-foreground font-medium">
               <th className="text-left py-2 px-3">Vendedor</th>
               <th className="text-right py-2 px-3">Leads no Período</th>
-              <th className="text-right py-2 px-3">Abertos (atual)</th>
               <th className="text-right py-2 px-3">Fechados no Período</th>
-              <th className="text-right py-2 px-3">Tarefas em Atraso</th>
-              <th className="text-right py-2 px-3">Sem Tarefa</th>
-              <th className="text-right py-2 px-3">Atraso Fim de Funil</th>
               <th className="text-right py-2 px-3">Ações no Período</th>
               <th className="text-right py-2 px-3">Ações/Lead</th>
               <th className="text-left py-2 px-3">Classificação</th>
@@ -260,19 +238,7 @@ export function ConsistenciaCRMBlock({ activities, dateRange }: Props) {
                   {r.leads_no_periodo.toLocaleString('pt-BR')}
                 </td>
                 <td className="py-2 px-3 text-right text-foreground">
-                  {r.leads_abertos_atual.toLocaleString('pt-BR')}
-                </td>
-                <td className="py-2 px-3 text-right text-foreground">
                   {r.leads_fechados_periodo.toLocaleString('pt-BR')}
-                </td>
-                <td className="py-2 px-3 text-right text-foreground">
-                  {r.tarefas_em_atraso.toLocaleString('pt-BR')}
-                </td>
-                <td className="py-2 px-3 text-right text-foreground">
-                  {r.sem_tarefa.toLocaleString('pt-BR')}
-                </td>
-                <td className="py-2 px-3 text-right text-foreground">
-                  {r.atraso_fim_funil.toLocaleString('pt-BR')}
                 </td>
                 <td className="py-2 px-3 text-right text-foreground">
                   {r.acoes_periodo.toLocaleString('pt-BR')}
@@ -296,6 +262,130 @@ export function ConsistenciaCRMBlock({ activities, dateRange }: Props) {
           </tbody>
         </table>
       </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <ScatterCard
+          title="Leads no Período × Fechamentos"
+          data={scatterData}
+          xKey="leads"
+          xLabel="Leads no Período"
+          yKey="fechamentos"
+          yLabel="Fechados no Período"
+        />
+        <ScatterCard
+          title="Leads no Período × Classificação"
+          data={scatterData}
+          xKey="leads"
+          xLabel="Leads no Período"
+          yKey="classificacaoNum"
+          yLabel="Classificação"
+          yIsClassificacao
+        />
+        <ScatterCard
+          title="Fechamentos × Classificação"
+          data={scatterData}
+          xKey="fechamentos"
+          xLabel="Fechados no Período"
+          yKey="classificacaoNum"
+          yLabel="Classificação"
+          yIsClassificacao
+        />
+      </div>
+    </div>
+  );
+}
+
+interface ScatterCardProps {
+  title: string;
+  data: Array<{
+    name: string;
+    leads: number;
+    fechamentos: number;
+    classificacao: ClassificacaoCRM;
+    classificacaoNum: number;
+    fill: string;
+  }>;
+  xKey: 'leads' | 'fechamentos';
+  xLabel: string;
+  yKey: 'leads' | 'fechamentos' | 'classificacaoNum';
+  yLabel: string;
+  yIsClassificacao?: boolean;
+}
+
+function ScatterCard({ title, data, xKey, xLabel, yKey, yLabel, yIsClassificacao }: ScatterCardProps) {
+  return (
+    <div className="card-glass p-4 rounded-xl">
+      <h3 className="text-sm font-semibold text-foreground mb-3">{title}</h3>
+      <ResponsiveContainer width="100%" height={260}>
+        <ScatterChart margin={{ top: 10, right: 20, bottom: 30, left: yIsClassificacao ? 100 : 40 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="hsl(240, 5%, 25%)" />
+          <XAxis
+            type="number"
+            dataKey={xKey}
+            name={xLabel}
+            stroke="hsl(240, 5%, 65%)"
+            tick={{ fill: 'hsl(240, 5%, 65%)', fontSize: 11 }}
+            label={{
+              value: xLabel,
+              position: 'insideBottom',
+              offset: -15,
+              fill: 'hsl(240, 5%, 65%)',
+              fontSize: 11,
+            }}
+          />
+          <YAxis
+            type="number"
+            dataKey={yKey}
+            name={yLabel}
+            stroke="hsl(240, 5%, 65%)"
+            tick={{ fill: 'hsl(240, 5%, 65%)', fontSize: 11 }}
+            domain={yIsClassificacao ? [0.5, 4.5] : ['auto', 'auto']}
+            ticks={yIsClassificacao ? [1, 2, 3, 4] : undefined}
+            tickFormatter={
+              yIsClassificacao
+                ? (v: number) => CLASSIFICACAO_ORDER[v - 1] ?? ''
+                : undefined
+            }
+            width={yIsClassificacao ? 100 : 60}
+          />
+          <ZAxis range={[80, 80]} />
+          <Tooltip
+            {...TOOLTIP_STYLE}
+            cursor={{ strokeDasharray: '3 3' }}
+            content={({ active, payload }) => {
+              if (!active || !payload || !payload.length) return null;
+              const d = payload[0].payload as (typeof data)[number];
+              return (
+                <div
+                  style={{
+                    backgroundColor: 'hsl(240, 10%, 10%)',
+                    border: '1px solid hsl(240, 5%, 25%)',
+                    borderRadius: 8,
+                    padding: 10,
+                    color: '#fff',
+                    fontSize: 12,
+                  }}
+                >
+                  <div style={{ fontWeight: 600, marginBottom: 4 }}>{d.name}</div>
+                  <div>Leads: {d.leads.toLocaleString('pt-BR')}</div>
+                  <div>Fechamentos: {d.fechamentos.toLocaleString('pt-BR')}</div>
+                  <div>
+                    Classificação:{' '}
+                    <span style={{ color: CLASSIFICACAO_COLORS[d.classificacao] }}>
+                      {d.classificacao}
+                    </span>
+                  </div>
+                </div>
+              );
+            }}
+          />
+          <Scatter data={data}>
+            {data.map((d, i) => (
+              <Cell key={i} fill={d.fill} />
+            ))}
+          </Scatter>
+        </ScatterChart>
+      </ResponsiveContainer>
     </div>
   );
 }

@@ -78,9 +78,27 @@ export default function MonitoramentoDashboard() {
       <div className="max-w-6xl">
         {activeSection === 'overview' && <OverviewBlock activities={filtered} />}
         {activeSection === 'categories' && <UsersBlock activities={filtered} />}
-        {activeSection === 'user-detail' && <UserDetailBlock activities={filtered} dateRange={effectiveDateRange} />}
-        {activeSection === 'consistencia' && <ConsistenciaCRMBlock activities={filtered} dateRange={effectiveDateRange} />}
-        {activeSection === 'ranking' && <RankingPercentilBlock activities={filtered} dateRange={effectiveDateRange} />}
+        {activeSection === 'user-detail' && (
+          <UserDetailBlock
+            activities={activities}
+            selectedUsers={filters.users}
+            dateRange={effectiveDateRange}
+          />
+        )}
+        {activeSection === 'consistencia' && (
+          <ConsistenciaCRMBlock
+            activities={activities}
+            selectedUsers={filters.users}
+            dateRange={effectiveDateRange}
+          />
+        )}
+        {activeSection === 'ranking' && (
+          <RankingPercentilBlock
+            activities={activities}
+            selectedUsers={filters.users}
+            dateRange={effectiveDateRange}
+          />
+        )}
       </div>
     </div>
   );
