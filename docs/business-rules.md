@@ -222,30 +222,74 @@ Implementação em `Bloco1Geral.tsx` e `Bloco5Qualificacao.tsx` ([src/areas/come
 
 **Correção aplicada** (fix em Bloco5Qualificacao): o numerador só conta se o lead também está em `leadsRecebidos` do mesmo período — caso contrário, teríamos leads qualificados no período cujo recebimento foi em outro mês, inflando a taxa para >100%.
 
-## Campos automatizados excluídos
+## Whitelist de campos humanos
 
-Seis `campo_id` em `gold.cubo_alteracao_campos_eventos` são atualizados por **bots/integrações do Kommo**, não por ação humana. São excluídos das métricas de "campos alterados" nos dashboards de SDR e Vendedor.
+Versão atual (substituiu a blacklist de 6 campos-bot). Toda alteração de custom field no Kommo vira evento em `gold.cubo_alteracao_campos_eventos`, mas só **~62 desses campos** são considerados ação humana para métricas de desempenho. O resto é bot, integração, tracking ou metadata automática.
 
-| `campo_id` | Nome | Por que é bot |
-|---|---|---|
-| 851177 | Etapa do funil | Atualizado automaticamente quando o lead muda de status |
-| 850685 | Parar IA Whatsapp | Toggle da automação de IA |
-| 850687 | Parar IA Instagram | Toggle da automação de IA |
-| 853875 | Origem da oportunidade | Preenchido automaticamente na criação |
-| 849769 | Canal de entrada | Preenchido automaticamente |
-| 586018 | Tracking (sem label) | Tracking interno |
+### Arquitetura
 
-**Aplicado em:**
-- Hook `useAlteracoesSDR` em [`desempenho-sdr/hooks/useDesempenhoSDR.ts`](../src/areas/comercial/desempenho-sdr/hooks/useDesempenhoSDR.ts)
-- Hook `useAlteracoesCampos` em [`desempenho-vendedor/hooks/useDesempenhoVendedor.ts`](../src/areas/comercial/desempenho-vendedor/hooks/useDesempenhoVendedor.ts)
-- RPC `gold.campos_alterados_filtrados_por_user()` (consumida pelo Consistência CRM)
-
-Query padrão:
-```ts
-.not('campo_id', 'in', '(851177,850685,850687,853875,849769,586018)')
+```mermaid
+flowchart LR
+  K[Kommo API<br/>custom_fields] -->|sync-kommo-custom-fields| BCF[bronze.kommo_custom_fields<br/>~281 fields]
+  BCF --> DC[config.dim_campos<br/>whitelist incluir=true]
+  CACE[gold.cubo_alteracao_campos_eventos<br/>todas as alterações] --> AH[gold.alteracoes_humanas<br/>VIEW filtrada]
+  DC --> AH
+  BCF --> AH
+  AH --> H1[useAlteracoesSDR]
+  AH --> H2[useAlteracoesCampos]
+  AH --> RPC[RPC campos_alterados<br/>_filtrados_por_user]
 ```
 
-**⚠️ Nota:** `gold.user_activities_daily` **não** exclui esses campos (a categoria `'Campo alterado'` agrega todos). Por isso, para o Consistência CRM, trocamos a fonte de `'Campo alterado'` para a RPC filtrada.
+### Como editar
+
+Para marcar/desmarcar um campo:
+
+```sql
+-- Adicionar à whitelist
+UPDATE config.dim_campos
+SET incluir = true, nota = 'adicionado em dd/mm — razão'
+WHERE campo_id = 1234567;
+
+-- Remover
+UPDATE config.dim_campos SET incluir = false WHERE campo_id = 1234567;
+
+-- Listar whitelist atual ordenada por nome
+SELECT dc.campo_id, kcf.name, dc.nota
+FROM config.dim_campos dc
+JOIN bronze.kommo_custom_fields kcf ON kcf.id = dc.campo_id
+WHERE dc.incluir = true
+ORDER BY kcf.name;
+```
+
+Mudanças têm efeito **imediato** — a view `gold.alteracoes_humanas` faz o `JOIN` em tempo real.
+
+### Whitelist inicial (abril 2026)
+
+62 campos marcados como `incluir = true` em `config.dim_campos`, selecionados a partir da lista de campos editáveis manualmente no CRM (confirmada pela Julia):
+
+**Agendamento e venda:** Nome da escola, Produtos, Experiência, Conteúdo da apresentação, Observações, Data de Fechamento, Data e Hora do Agendamento, Data Ofertada, Nº de Diárias, Brinde, Faixa de alunos, Nº de alunos, Cidade - Estado, Horizonte de Agendamento, Astrônomo, Turnos do evento, Nível de Ensino, Professor/Matéria, CNPJ, Local coberto?, Cúpula
+
+**Atribuição:** SDR, Vendedor/Consultor, Qualificado por
+
+**Qualificação / ligações SDR:** Ligação 1 SDR, Ligação 2 SDR, Ligação efetuada, OBS ligação 1, Status ligação IA, Ult. interação, Mês pretendido para visita, Diagnóstico concluído, Astronomos sugeridos pela IA, Data sugerida p/ visita mês atual / seguinte / pretendido lead
+
+**Negociação:** Proposta enviada, Aguardando decisor, Ajuste comercial, Motivo de Perda, Bot Ativo Negociação, Desativar Bot
+
+**Reunião / apresentação:** Quantidade de reuniões feitas, Reunião feita, Dia da Reunião, Horário da Reunião, Resposável que Participará, E-mail Responsável, Score reunião
+
+**Ofertas:** Ofereceu Astronerd?, Ofereceu Clube de assinatura?, Ofereceu Observação Noturna?
+
+**Links / mídia:** PDF proposta Comercial personalizada Link, Site do lead, Mídia Consultor/vendedor (com site) Link, Mídia SDR link, Mídia Onboarding Consultor link
+
+**Outros:** Anúncio, Whats de contato, Tipo de cliente, Data Reativação, Check Material
+
+**Excluídos (exemplos):** Etapa do funil, Parar IA WhatsApp/Instagram, Origem da oportunidade, Canal de entrada, tracking 586018, Ult. lead, tags, campos de contato/company, UTM parameters e todos os ~190 campos que não envolvem ação direta de SDR/Vendedor.
+
+### Consumo
+
+Toda nova métrica relacionada a "alteração humana" deve consumir `gold.alteracoes_humanas`, nunca `gold.cubo_alteracao_campos_eventos` direto.
+
+**⚠️ Nota:** `gold.user_activities_daily` **continua não filtrando** esses campos (a categoria `'Campo alterado'` agrega todos). Por isso, no Consistência CRM, trocamos a fonte de `'Campo alterado'` para a RPC `campos_alterados_filtrados_por_user()` que já usa `alteracoes_humanas`.
 
 ## Deduplicação de passagens de lead
 

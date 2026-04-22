@@ -145,6 +145,23 @@ Tarefas abertas (sincroniza apenas `is_completed=false`). Fonte do snapshot "tar
 
 **Índices:** PK, `entity_id`, `responsible_user_id`, `complete_till`, `is_completed`.
 
+### `bronze.kommo_custom_fields` (~281 linhas)
+
+Catálogo de **todos os custom fields** do Kommo (leads, contacts, companies), sincronizado pela edge function `sync-kommo-custom-fields`. Usado para resolver `campo_id → campo_nome` e para montar a whitelist humana em `config.dim_campos`.
+
+| Coluna | Tipo | Descrição |
+|---|---|---|
+| `id` | bigint PK | ID do custom field no Kommo |
+| `name` | text | Nome visível (ex.: `'Vendedor/Consultor'`, `'Data de Fechamento'`) |
+| `type` | text | `text`, `numeric`, `select`, `multiselect`, `date`, `date_time`, `checkbox`, `radiobutton`, `textarea`, `url`, `legal_entity`, etc. |
+| `entity_type` | text | `leads`, `contacts`, `companies` |
+| `code` | text | Código interno do Kommo (geralmente `null`) |
+| `is_deletable`, `is_computed` | bool | Metadados |
+| `sort`, `group_id` | | Ordem e grupo no formulário do Kommo |
+| `synced_at` | timestamptz | |
+
+**Índices:** PK, `entity_type`.
+
 ### `bronze.kommo_users` (~94 linhas)
 
 | Coluna | Tipo | Descrição |
@@ -329,18 +346,32 @@ Cada evento de mudança de campo custom, expandido com contexto.
 
 Filtro de origem: `e.type LIKE 'custom_field_%' OR e.type = 'sale_field_changed'`.
 
-**⚠️ Seis campos são bots/integrações** e devem ser excluídos da métrica "ações de SDR/vendedor" (ver [`business-rules.md`](business-rules.md#campos-automatizados-excluídos)):
+**⚠️ Filtro de ação humana**: os hooks e RPCs de SDR/Vendedor/Consistência CRM **não** consomem esta tabela diretamente. Em vez disso usam a view [`gold.alteracoes_humanas`](#goldalteracoes_humanas-view), que faz `JOIN` com `config.dim_campos` para manter apenas os campos marcados como ação humana (whitelist editável de ~62 campos hoje). Ver [`business-rules.md`](business-rules.md#whitelist-de-campos-humanos).
 
-| `campo_id` | Nome |
-|---|---|
-| 851177 | Etapa do funil |
-| 850685 | Parar IA Whatsapp |
-| 850687 | Parar IA Instagram |
-| 853875 | Origem da oportunidade |
-| 849769 | Canal de entrada |
-| 586018 | tracking (sem nome) |
+### `gold.alteracoes_humanas` (view)
 
-Aplicado nos hooks `useAlteracoesSDR`, `useAlteracoesCampos` e na RPC `gold.campos_alterados_filtrados_por_user`.
+View que filtra `gold.cubo_alteracao_campos_eventos` pela whitelist em `config.dim_campos` e traz o nome legível do campo via `bronze.kommo_custom_fields`.
+
+```sql
+CREATE OR REPLACE VIEW gold.alteracoes_humanas AS
+SELECT
+  c.id, c.event_id, c.lead_id, c.entity_type,
+  c.campo_alterado, c.campo_id,
+  kcf.name AS campo_nome,
+  c.criado_por_id, c.criado_por,
+  c.data_criacao, c.dia_util, c.hora_brt, c.dentro_janela,
+  c.valor_antes, c.valor_depois
+FROM gold.cubo_alteracao_campos_eventos c
+JOIN config.dim_campos dc ON dc.campo_id = c.campo_id AND dc.incluir = true
+LEFT JOIN bronze.kommo_custom_fields kcf ON kcf.id = c.campo_id;
+```
+
+**Consumida por:**
+- Hook `useAlteracoesSDR` em [`desempenho-sdr/hooks/useDesempenhoSDR.ts`](../src/areas/comercial/desempenho-sdr/hooks/useDesempenhoSDR.ts)
+- Hook `useAlteracoesCampos` em [`desempenho-vendedor/hooks/useDesempenhoVendedor.ts`](../src/areas/comercial/desempenho-vendedor/hooks/useDesempenhoVendedor.ts)
+- RPC `gold.campos_alterados_filtrados_por_user()` (via Consistência CRM)
+
+**Vantagem sobre blacklist**: edições na whitelist (`config.dim_campos.incluir`) têm efeito **imediato** — não precisa refresh. Novos campos criados no Kommo aparecem em `bronze.kommo_custom_fields` após o próximo sync, mas entram em `config.dim_campos` com `incluir = false` por default (isolamento seguro).
 
 ### `gold.user_activities_daily` (~172k linhas)
 
@@ -437,6 +468,35 @@ Faixas de MPA × multiplicador aplicado à comissão base.
 
 Regra adicional no código: se `mpa > 100`, usa `mpa / 100` como multiplicador direto, ignorando a tabela (ver `calcMultiplicador` em `desempenho-sdr/types.ts:91-97`).
 
+### `config.dim_campos` (~250 linhas)
+
+Whitelist de custom fields do Kommo considerados **ação humana** para efeito de métricas. Substitui a blacklist de 6 campos-bot que existia antes.
+
+| Coluna | Descrição |
+|---|---|
+| `campo_id` | PK, FK lógica para `bronze.kommo_custom_fields.id` |
+| `incluir` | bool — se `true`, o campo entra em `gold.alteracoes_humanas` |
+| `nota` | text livre — razão da inclusão/exclusão |
+| `updated_at` | timestamptz — atualizado automaticamente via trigger |
+
+**Preenchimento inicial:** ~250 campos sincronizados (todos com `incluir = false`), 62 marcados como `true` baseado na whitelist do time comercial (ver [business-rules.md → Whitelist](business-rules.md#whitelist-de-campos-humanos)).
+
+**Como editar a whitelist:**
+```sql
+-- Marcar campos como humano
+UPDATE config.dim_campos SET incluir = true, nota = 'motivo'
+WHERE campo_id IN (1234, 5678);
+
+-- Tirar da whitelist
+UPDATE config.dim_campos SET incluir = false WHERE campo_id = 1234;
+
+-- Listar os atuais
+SELECT dc.campo_id, kcf.name, dc.incluir, dc.nota
+FROM config.dim_campos dc
+JOIN bronze.kommo_custom_fields kcf ON kcf.id = dc.campo_id
+ORDER BY dc.incluir DESC, kcf.name;
+```
+
 ### `config.metas_faturamento` (12 linhas por ano)
 
 | Coluna | Descrição |
@@ -469,15 +529,14 @@ RETURN total
 
 ### `gold.campos_alterados_filtrados_por_user(p_from, p_to) → TABLE(user_id, total)`
 
-Conta alterações de campo por usuário no período, excluindo os 6 campos automatizados.
+Conta alterações de campo por usuário no período, restritas à whitelist em `config.dim_campos`.
 
 ```sql
 SELECT criado_por_id AS user_id, COUNT(*)::bigint AS total
-FROM gold.cubo_alteracao_campos_eventos
+FROM gold.alteracoes_humanas
 WHERE data_criacao >= p_from
   AND data_criacao <= p_to
   AND criado_por_id IS NOT NULL
-  AND campo_id NOT IN (851177, 850685, 850687, 853875, 849769, 586018)
 GROUP BY criado_por_id;
 ```
 
@@ -564,6 +623,7 @@ Todas em `supabase/functions/*/index.ts`. Rodam Deno, autenticadas com `KOMMO_AC
 | `sync-kommo-events-daily` | cron 06:15 UTC | GET `/api/v4/events` (filtrado por `updated_at >= 3d`) → upsert em `bronze.kommo_events_raw`. Também atualiza `kommo_users` e `kommo_pipelines` |
 | `sync-kommo-leads-daily` | cron 07:15 UTC | GET `/api/v4/leads` (updated_at ≥ 3d) → upsert em `bronze.kommo_leads_raw` |
 | `sync-kommo-tasks` | cron 07:45 UTC | GET `/api/v4/tasks?filter[is_completed]=0` → upsert em `bronze.kommo_tasks` (streaming upsert para não estourar o timeout de 150s). Aceita query params `onlyOpen`, `days`, `maxPages`, `startPage` |
+| `sync-kommo-custom-fields` | manual (ad-hoc) | GET `/api/v4/{leads,contacts,companies}/custom_fields` → upsert em `bronze.kommo_custom_fields`. Usado para manter o catálogo de campos atualizado e resolver nomes. |
 | `extract-quality-data-daily` | cron 07:30 UTC | Lê custom fields de qualidade em leads do Kommo → upsert em `gold.leads_quality` |
 | `refresh-gold-tables` | cron 08:00 UTC | Invoca todas as `refresh_*()` via RPC, na ordem correta |
 | `check-sync-health` | cron 08:30 UTC | Valida row counts e latências, retorna `{status:'ok'\|'fail', failures:N}` |
