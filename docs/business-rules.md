@@ -8,9 +8,9 @@ A Urânia mantém vários funis no Kommo. O BI se importa com alguns grupos espe
 
 ### Funis de pré-venda
 - **`Recepção Leads Insta`** — entrada de leads vindos do Instagram (triado por SDR)
-- **`Vendas WhatsApp`** — funil principal de atendimento comercial dos Consultores Inbound
-- **`Outbound`** — leads prospectados ativamente
-- **`Resgate/Nutrição Whats`** — leads "geladeira" sendo reativados
+- **`Vendas WhatsApp`** — recebe leads que entram em contato com nossos telefones de contato via WhatsApp; na primeira metade do funil quem atua são os SDR enquanto no fim são os Consultores Inbound
+- **`Outbound`** — leads prospectados ativamente e trabalhados pelos Consultores Outbound
+- **`Resgate/Nutrição Whats`** — leads que já foram trabalhados no funil de Vendas WhatsApp, mas não tiveram uma negativa direta então são trabalhados e reativados com cadência maior
 
 ### Funis de pós-venda (leads já fechados)
 - **`Onboarding Escolas`**
@@ -19,9 +19,50 @@ A Urânia mantém vários funis no Kommo. O BI se importa com alguns grupos espe
 - **`Clientes - CS`**
 - **`Shopping Fechados`** (constante `FUNIS_FECHADOS` em [`desempenho-vendedor/hooks/useDesempenhoVendedor.ts:6`](../src/areas/comercial/desempenho-vendedor/hooks/useDesempenhoVendedor.ts#L6) e [`campanhas/types.ts`](../src/areas/comercial/campanhas/types.ts))
 
-Um lead é considerado **"venda fechada"** (campo derivado `status_lead='Venda Fechada'` em `gold.cubo_leads_consolidado`) quando:
-1. Está em um desses funis de pós-venda, E
-2. `Data de Fechamento` (custom field) está preenchida.
+### Campo derivado `status_lead` em `gold.cubo_leads_consolidado`
+
+Este **não é um campo nativo do Kommo** — é derivado pela função `gold.refresh_leads_consolidado()` a partir do estado atual do lead (`bronze.kommo_leads_raw`). Quatro valores possíveis, avaliados nesta ordem de precedência (primeiro que bater ganha):
+
+| Ordem | Valor | Condição |
+|---|---|---|
+| 1º | `'Cancelado'` | `custom_fields.'Cancelado (Onboarding)' = 'Sim'` |
+| 2º | `'Venda Fechada'` | `pipeline_name IN ('Onboarding Escolas', 'Onboarding SME', 'Financeiro', 'Clientes - CS', 'Shopping Fechados')` **E** `custom_fields.'Data de Fechamento' IS NOT NULL` |
+| 3º | `'Venda Perdida'` | `status_name ILIKE '%perdida%' OR status_name ILIKE '%lost%'` |
+| 4º | `'Em andamento'` | Fallback — nenhuma das anteriores |
+
+SQL real da `refresh_leads_consolidado`:
+
+```sql
+CASE
+  WHEN l.custom_fields->>'Cancelado (Onboarding)' = 'Sim'
+    THEN 'Cancelado'
+  WHEN l.pipeline_name IN ('Onboarding Escolas','Onboarding SME','Financeiro','Clientes - CS','Shopping Fechados')
+    AND l.custom_fields->>'Data de Fechamento' IS NOT NULL
+    THEN 'Venda Fechada'
+  WHEN l.status_name ILIKE '%perdida%' OR l.status_name ILIKE '%lost%'
+    THEN 'Venda Perdida'
+  ELSE 'Em andamento'
+END AS status_lead
+```
+
+**Observações importantes:**
+
+- **Um lead cancelado que tem `Data de Fechamento` preenchida ainda é `'Cancelado'`**, nunca `'Venda Fechada'` — a cláusula 1 tem precedência.
+- **`Data de Fechamento`** é um custom field editado manualmente pelo time (não é `closed_at` nativo do Kommo). Ver [Sobre `data_de_fechamento`](#sobre-data_de_fechamento).
+- **`status_name`** é o estágio atual (ex.: `'Negociação'`, `'Lost'`, `'Venda perdida'`) — o `ILIKE '%perdida%'` é proposital para pegar variações de nomenclatura.
+- **"Venda Fechada" exige ambas as condições**: estar em pipeline de pós-venda **E** ter Data de Fechamento. Se só está no funil mas sem a data, fica `'Em andamento'`; se só tem a data mas está em outro funil, também.
+
+### Sobre `data_de_fechamento`
+
+Em `gold.cubo_leads_consolidado`, é parseado de `custom_fields.'Data de Fechamento'` como Unix epoch:
+
+```sql
+CASE WHEN (l.custom_fields->>'Data de Fechamento') ~ '^\d{9,10}$'
+  THEN to_timestamp((l.custom_fields->>'Data de Fechamento')::bigint)::date
+  ELSE NULL END
+```
+
+Mesmo padrão vale para `data_e_hora_do_agendamento` e `data_cancelamento`.
 
 ### Fim de funil de Vendas WhatsApp
 Estágios de "fim de funil" (onde o vendedor está em negociação avançada), usados no bloco Consistência CRM:
