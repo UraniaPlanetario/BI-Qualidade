@@ -87,6 +87,17 @@ Abas específicas de destaque dentro do Monitoramento: **Consistência CRM** (sc
 - Imports Supabase sempre de [`@/lib/supabase`](src/lib/supabase.ts)
 - Janela de horário comercial: seg-sex, 7h-19h BRT (`public.business_minutes()`)
 
+## 📚 Documentação viva — obrigatório
+
+**Toda mudança em regra de negócio, fórmula, filtro, coluna de tabela ou visual de dashboard exige atualização imediata da documentação em [`docs/`](docs/) no mesmo commit que aplica a mudança.** Não é opcional nem "depois".
+
+- **Alterou campo derivado, RPC, view, refresh, whitelist, constante de fórmula?** → atualiza [`docs/data-model.md`](docs/data-model.md)
+- **Alterou definição de "venda fechada", "leads no período", classificação, exclusões, thresholds, pesos?** → atualiza [`docs/business-rules.md`](docs/business-rules.md)
+- **Alterou um visual, hook, filtro aplicado ou adicionou coluna numa tabela?** → atualiza o `.md` correspondente em [`docs/dashboards/`](docs/dashboards/)
+- **Mudou arquitetura, stack, Supabase project ou padrões do ecossistema?** → atualiza este `CLAUDE.md`
+
+Antes de commitar mudança em código que afete métricas/regras, verifique se o doc ainda reflete o comportamento. Se não, edite o doc no mesmo commit. Um dashboard cujo número diverge da doc é bug de documentação, não só de código.
+
 ## Estrutura do projeto
 
 ```
