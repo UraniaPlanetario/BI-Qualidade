@@ -3,7 +3,8 @@ import { createPortal } from 'react-dom';
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, addMonths, subMonths, subDays, subWeeks, isSameMonth, isSameDay, isWithinInterval, setMonth, setYear } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Calendar, X, ChevronLeft, ChevronRight } from 'lucide-react';
-import { UserActivity, MonitoringFilters, CATEGORY_COLORS } from '../types';
+import { MonitoringFilters, CATEGORY_COLORS } from '../types';
+import { ActivitySummary } from '../hooks/useConsistenciaData';
 
 // --- Calendar sub-components (same pattern as FilterBar) ---
 
@@ -374,19 +375,19 @@ function DateRangePicker({
 // --- Main Filter Bar ---
 
 interface Props {
-  activities: UserActivity[];
+  summary: ActivitySummary[];
   filters: MonitoringFilters;
   onFiltersChange: (f: MonitoringFilters) => void;
 }
 
-export function MonitoringFilterBar({ activities, filters, onFiltersChange }: Props) {
+export function MonitoringFilterBar({ summary, filters, onFiltersChange }: Props) {
   const users = useMemo(() => {
-    return Array.from(new Set(activities.map((a) => a.user_name))).sort();
-  }, [activities]);
+    return Array.from(new Set(summary.map((a) => a.user_name))).sort();
+  }, [summary]);
 
   const categories = useMemo(() => {
-    return Array.from(new Set(activities.map((a) => a.category))).sort();
-  }, [activities]);
+    return Array.from(new Set(summary.map((a) => a.category))).sort();
+  }, [summary]);
 
   const hasFilters = filters.users.length > 0 || filters.categories.length > 0 ||
     filters.roles.length > 0 || filters.dateRange.from || filters.dateRange.to;

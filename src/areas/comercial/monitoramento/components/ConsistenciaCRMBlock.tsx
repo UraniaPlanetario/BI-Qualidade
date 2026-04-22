@@ -12,12 +12,12 @@ import {
   Cell,
 } from 'recharts';
 import {
+  ActivitySummary,
   useActiveConsultores,
   useClosedLeadsPeriodo,
   useLeadsAtribuidosPeriodo,
 } from '../hooks/useConsistenciaData';
 import {
-  UserActivity,
   ConsistenciaVendedor,
   classifyConsistencia,
   CLASSIFICACAO_COLORS,
@@ -50,12 +50,12 @@ function toDateStr(d: Date): string {
 }
 
 interface Props {
-  activities: UserActivity[];
+  summary: ActivitySummary[];
   selectedUsers: string[];
   dateRange: { from: Date; to: Date };
 }
 
-export function ConsistenciaCRMBlock({ activities, selectedUsers, dateRange }: Props) {
+export function ConsistenciaCRMBlock({ summary, selectedUsers, dateRange }: Props) {
   const fromStr = toDateStr(dateRange.from);
   const toStr = toDateStr(dateRange.to);
 
@@ -78,9 +78,9 @@ export function ConsistenciaCRMBlock({ activities, selectedUsers, dateRange }: P
     }
 
     const acoesPorVendedor = new Map<number, number>();
-    for (const a of activities) {
+    for (const a of summary) {
       if (EXCLUDED_CATEGORIES.has(a.category)) continue;
-      acoesPorVendedor.set(a.user_id, (acoesPorVendedor.get(a.user_id) || 0) + a.activity_count);
+      acoesPorVendedor.set(a.user_id, (acoesPorVendedor.get(a.user_id) || 0) + a.total);
     }
 
     const out: ConsistenciaVendedor[] = [];
@@ -103,7 +103,7 @@ export function ConsistenciaCRMBlock({ activities, selectedUsers, dateRange }: P
       });
     }
     return out.sort((a, b) => b.acoes_por_lead - a.acoes_por_lead);
-  }, [consultores, closedLeads, activities, leadsAtribuidos]);
+  }, [consultores, closedLeads, summary, leadsAtribuidos]);
 
   const rows = useMemo(() => {
     if (selectedUsers.length === 0) return allRows;
@@ -111,7 +111,7 @@ export function ConsistenciaCRMBlock({ activities, selectedUsers, dateRange }: P
     return allRows.filter((r) => set.has(r.user_name));
   }, [allRows, selectedUsers]);
 
-  const summary = useMemo(() => {
+  const classificacaoSummary = useMemo(() => {
     const counts: Record<ClassificacaoCRM, number> = {
       'Boa': 0,
       'Moderada': 0,
@@ -201,7 +201,7 @@ export function ConsistenciaCRMBlock({ activities, selectedUsers, dateRange }: P
               className="text-3xl font-bold"
               style={{ color: CLASSIFICACAO_COLORS[c] }}
             >
-              {summary[c]}
+              {classificacaoSummary[c]}
             </p>
             <p className="text-xs text-muted-foreground mt-1">vendedores</p>
           </div>

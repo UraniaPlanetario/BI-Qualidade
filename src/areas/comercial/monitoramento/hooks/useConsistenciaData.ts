@@ -104,6 +104,41 @@ export function useClosedLeadsPeriodo(dateFrom: string | null, dateTo: string | 
   });
 }
 
+export interface ActivitySummary {
+  user_id: number;
+  user_name: string;
+  role_name: string | null;
+  category: string;
+  event_type: string;
+  total: number;
+  dias_com_atividade: number;
+}
+
+export function useActivitiesSummary(dateFrom: string | null, dateTo: string | null) {
+  return useQuery<ActivitySummary[]>({
+    queryKey: ['monitoramento_activities_summary', dateFrom, dateTo],
+    queryFn: async () => {
+      const from = dateFrom ? dateFrom + 'T00:00:00Z' : '1970-01-01T00:00:00Z';
+      const to = dateTo ? dateTo + 'T23:59:59Z' : '2999-12-31T23:59:59Z';
+      const { data, error } = await supabase
+        .schema('gold')
+        .rpc('activities_summary_periodo', { p_from: from, p_to: to });
+      if (error) throw error;
+      return ((data || []) as any[]).map((r) => ({
+        user_id: Number(r.user_id),
+        user_name: r.user_name,
+        role_name: r.role_name,
+        category: r.category,
+        event_type: r.event_type,
+        total: Number(r.total),
+        dias_com_atividade: Number(r.dias_com_atividade),
+      }));
+    },
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+  });
+}
+
 export interface MensagensPorLeadRow {
   user_id: number;
   total_msgs: number;

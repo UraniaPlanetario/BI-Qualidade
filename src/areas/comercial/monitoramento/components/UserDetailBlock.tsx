@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
-import { AlertCircle } from 'lucide-react';
-import { UserActivity, CATEGORY_COLORS } from '../types';
+import { AlertCircle, Loader2 } from 'lucide-react';
+import { CATEGORY_COLORS, MonitoringFilters } from '../types';
+import { useActivitiesData } from '../hooks/useActivitiesData';
 import { getISOWeek, getISOWeekYear, parseISO, startOfISOWeek, endOfISOWeek, format, differenceInDays, subDays } from 'date-fns';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, ReferenceLine } from 'recharts';
 
@@ -12,12 +13,21 @@ const TOOLTIP_STYLE = {
 const EXCLUDED_CATEGORIES = new Set(['Tag', 'Vinculacao', 'Outros']);
 
 interface Props {
-  activities: UserActivity[];
   selectedUsers: string[];
   dateRange: { from: Date; to: Date };
 }
 
-export function UserDetailBlock({ activities, selectedUsers, dateRange }: Props) {
+export function UserDetailBlock({ selectedUsers, dateRange }: Props) {
+  const filtersForHook = useMemo<MonitoringFilters>(
+    () => ({
+      users: selectedUsers,
+      categories: [],
+      roles: [],
+      dateRange: { from: dateRange.from, to: dateRange.to },
+    }),
+    [selectedUsers, dateRange],
+  );
+  const { data: activities = [], isLoading } = useActivitiesData(filtersForHook);
   const selectedUser = selectedUsers.length === 1 ? selectedUsers[0] : '';
 
   const filtered = useMemo(
@@ -190,6 +200,14 @@ export function UserDetailBlock({ activities, selectedUsers, dateRange }: Props)
 
   const multipleSelected = selectedUsers.length > 1;
   const noneSelected = selectedUsers.length === 0;
+
+  if (isLoading && !multipleSelected && !noneSelected) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="animate-spin text-primary" size={32} />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

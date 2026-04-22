@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { startOfMonth } from 'date-fns';
-import { useActivitiesData, useFilteredActivities } from '../hooks/useActivitiesData';
 import { MonitoringFilters } from '../types';
+import { useActivitiesSummary } from '../hooks/useConsistenciaData';
 import { MonitoringFilterBar } from '../components/MonitoringFilterBar';
 import { OverviewBlock } from '../components/OverviewBlock';
 import { UserDetailBlock } from '../components/UserDetailBlock';
@@ -16,6 +16,10 @@ const SECTIONS = [
   { id: 'ranking', label: 'Ranking por Percentil' },
 ];
 
+function toDateStr(d: Date): string {
+  return d.toISOString().split('T')[0];
+}
+
 export default function MonitoramentoDashboard() {
   const [filters, setFilters] = useState<MonitoringFilters>({
     users: [],
@@ -24,14 +28,26 @@ export default function MonitoramentoDashboard() {
     dateRange: { from: null, to: null },
   });
 
-  const { data: activities = [], isLoading, error } = useActivitiesData(filters);
-  const filtered = useFilteredActivities(activities, filters);
-  const [activeSection, setActiveSection] = useState('overview');
-
   const effectiveDateRange = {
     from: filters.dateRange.from ?? startOfMonth(new Date()),
     to: filters.dateRange.to ?? new Date(),
   };
+
+  const fromStr = toDateStr(effectiveDateRange.from);
+  const toStr = toDateStr(effectiveDateRange.to);
+
+  const { data: summary = [], isLoading, error } = useActivitiesSummary(fromStr, toStr);
+
+  const filteredSummary = useMemo(() => {
+    return summary.filter((a) => {
+      if (filters.users.length > 0 && !filters.users.includes(a.user_name)) return false;
+      if (filters.categories.length > 0 && !filters.categories.includes(a.category)) return false;
+      if (filters.roles.length > 0 && !filters.roles.includes(a.role_name || '')) return false;
+      return true;
+    });
+  }, [summary, filters]);
+
+  const [activeSection, setActiveSection] = useState('overview');
 
   return (
     <div>
@@ -40,7 +56,7 @@ export default function MonitoramentoDashboard() {
         <p className="text-sm text-muted-foreground mt-1">Atividades dos usuários no Kommo CRM</p>
       </div>
 
-      <MonitoringFilterBar activities={activities} filters={filters} onFiltersChange={setFilters} />
+      <MonitoringFilterBar summary={summary} filters={filters} onFiltersChange={setFilters} />
 
       <div className="card-glass p-1 rounded-xl mb-6 flex flex-wrap gap-1">
         {SECTIONS.map(({ id, label }) => (
@@ -71,25 +87,24 @@ export default function MonitoramentoDashboard() {
         ) : (
           <>
             {activeSection === 'overview' && (
-              <OverviewBlock activities={filtered} dateRange={effectiveDateRange} />
+              <OverviewBlock summary={filteredSummary} dateRange={effectiveDateRange} />
             )}
             {activeSection === 'user-detail' && (
               <UserDetailBlock
-                activities={activities}
                 selectedUsers={filters.users}
                 dateRange={effectiveDateRange}
               />
             )}
             {activeSection === 'consistencia' && (
               <ConsistenciaCRMBlock
-                activities={activities}
+                summary={summary}
                 selectedUsers={filters.users}
                 dateRange={effectiveDateRange}
               />
             )}
             {activeSection === 'ranking' && (
               <RankingPercentilBlock
-                activities={activities}
+                summary={summary}
                 selectedUsers={filters.users}
                 dateRange={effectiveDateRange}
               />

@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
-import { UserActivity, CATEGORY_COLORS } from '../types';
+import { CATEGORY_COLORS } from '../types';
+import { ActivitySummary } from '../hooks/useConsistenciaData';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { UsersBlock } from './UsersBlock';
 
@@ -12,43 +13,45 @@ const DISPLAY_LABEL: Record<string, string> = {
   Tarefa: 'Tarefas Concluídas',
 };
 
+const EXCLUDED = ['Tag', 'Vinculacao', 'Outros'];
+
 export function OverviewBlock({
-  activities,
+  summary,
   dateRange,
 }: {
-  activities: UserActivity[];
+  summary: ActivitySummary[];
   dateRange: { from: Date; to: Date };
 }) {
-  const EXCLUDED = ['Tag', 'Vinculacao', 'Outros'];
-
   // Ajuste: na categoria 'Tarefa', só contamos task_completed (renomeada para "Tarefas Concluídas")
   const filteredForChart = useMemo(
     () =>
-      activities.filter((a) => {
+      summary.filter((a) => {
         if (EXCLUDED.includes(a.category)) return false;
         if (a.category === 'Tarefa') return a.event_type === 'task_completed';
         return true;
       }),
-    [activities],
+    [summary],
   );
 
   const stats = useMemo(() => {
-    const total = filteredForChart.reduce((s, a) => s + a.activity_count, 0);
+    const total = filteredForChart.reduce((s, a) => s + a.total, 0);
     const users = new Set(filteredForChart.map((a) => a.user_id)).size;
-    const days = new Set(filteredForChart.map((a) => a.activity_date)).size;
+    // dias_com_atividade vem embutido na RPC (mesmo valor em todas as linhas)
+    const days = filteredForChart[0]?.dias_com_atividade ?? 0;
     const avgPerUser = users > 0 ? Math.round(total / users) : 0;
     const avgPerDay = days > 0 ? Math.round(total / days) : 0;
     return { total, users, avgPerUser, avgPerDay, days };
   }, [filteredForChart]);
 
   const byCategory = useMemo(() => {
-    const map: Record<string, number> = {};
+    const map: Record<string, { value: number; originalCategory: string }> = {};
     for (const a of filteredForChart) {
       const label = DISPLAY_LABEL[a.category] ?? a.category;
-      map[label] = (map[label] || 0) + a.activity_count;
+      if (!map[label]) map[label] = { value: 0, originalCategory: a.category };
+      map[label].value += a.total;
     }
     return Object.entries(map)
-      .map(([name, value]) => ({ name, value, originalCategory: Object.keys(DISPLAY_LABEL).find((k) => DISPLAY_LABEL[k] === name) ?? name }))
+      .map(([name, { value, originalCategory }]) => ({ name, value, originalCategory }))
       .sort((a, b) => b.value - a.value);
   }, [filteredForChart]);
 
@@ -92,7 +95,7 @@ export function OverviewBlock({
         </ResponsiveContainer>
       </div>
 
-      <UsersBlock activities={activities} dateRange={dateRange} />
+      <UsersBlock summary={summary} dateRange={dateRange} />
     </div>
   );
 }

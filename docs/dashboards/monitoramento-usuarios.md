@@ -27,7 +27,21 @@ src/areas/comercial/monitoramento/
 
 ## Hooks
 
-### `useActivitiesData(filters)` — fonte principal
+### `useActivitiesSummary(dateFrom, dateTo)` — fonte principal (agregada)
+
+[`hooks/useConsistenciaData.ts`](../../src/areas/comercial/monitoramento/hooks/useConsistenciaData.ts)
+
+Chama a RPC `gold.activities_summary_periodo` que retorna **~900 linhas pré-agregadas** em vez das ~33k brutas. Consumido por OverviewBlock (+ UsersBlock embutido), ConsistenciaCRMBlock e RankingPercentilBlock.
+
+```ts
+supabase.schema('gold').rpc('activities_summary_periodo', { p_from, p_to });
+```
+
+Retorno por linha: `{ user_id, user_name, role_name, category, event_type, total, dias_com_atividade }`.
+
+Cache: staleTime 5min, gcTime 10min.
+
+### `useActivitiesData(filters)` — dados brutos (lazy, só UserDetail)
 
 [`hooks/useActivitiesData.ts`](../../src/areas/comercial/monitoramento/hooks/useActivitiesData.ts)
 

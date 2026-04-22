@@ -1,5 +1,10 @@
 import { useMemo, useState } from 'react';
-import { UserActivity, CATEGORY_COLORS } from '../types';
+import { CATEGORY_COLORS } from '../types';
+import {
+  ActivitySummary,
+  useMensagensPorLead,
+  useTopCamposAlterados,
+} from '../hooks/useConsistenciaData';
 import {
   BarChart,
   Bar,
@@ -9,7 +14,6 @@ import {
   ResponsiveContainer,
   ReferenceLine,
 } from 'recharts';
-import { useMensagensPorLead, useTopCamposAlterados } from '../hooks/useConsistenciaData';
 
 const TOOLTIP_STYLE = {
   contentStyle: { backgroundColor: 'hsl(240, 10%, 10%)', border: 'none', borderRadius: 8 },
@@ -109,29 +113,29 @@ function HorizontalBarChart({
 }
 
 function buildUserRows(
-  activities: UserActivity[],
-  filterFn: (a: UserActivity) => boolean,
+  rows: ActivitySummary[],
+  filterFn: (a: ActivitySummary) => boolean,
 ): { rows: { name: string; count: number }[]; total: number; uniqueUsers: number; avg: number } {
   const map: Record<string, number> = {};
-  for (const a of activities) {
+  for (const a of rows) {
     if (filterFn(a)) {
-      map[a.user_name] = (map[a.user_name] || 0) + a.activity_count;
+      map[a.user_name] = (map[a.user_name] || 0) + a.total;
     }
   }
-  const rows = Object.entries(map)
+  const out = Object.entries(map)
     .map(([name, count]) => ({ name, count }))
     .sort((a, b) => b.count - a.count);
-  const total = rows.reduce((s, r) => s + r.count, 0);
-  const uniqueUsers = rows.length;
+  const total = out.reduce((s, r) => s + r.count, 0);
+  const uniqueUsers = out.length;
   const avg = uniqueUsers === 0 ? 0 : Math.round(total / uniqueUsers);
-  return { rows, total, uniqueUsers, avg };
+  return { rows: out, total, uniqueUsers, avg };
 }
 
 export function UsersBlock({
-  activities,
+  summary,
   dateRange,
 }: {
-  activities: UserActivity[];
+  summary: ActivitySummary[];
   dateRange: { from: Date; to: Date };
 }) {
   const [activeTab, setActiveTab] = useState('Mensagem Enviada');
@@ -139,8 +143,8 @@ export function UsersBlock({
   const toStr = toDateStr(dateRange.to);
 
   const filteredActivities = useMemo(
-    () => activities.filter((a) => !EXCLUDED_CATEGORIES.includes(a.category)),
-    [activities],
+    () => summary.filter((a) => !EXCLUDED_CATEGORIES.includes(a.category)),
+    [summary],
   );
 
   // Data per non-Tarefa category

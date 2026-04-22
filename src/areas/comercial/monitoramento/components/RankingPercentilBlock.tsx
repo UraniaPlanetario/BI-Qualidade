@@ -2,10 +2,10 @@ import { useMemo } from 'react';
 import { Loader2, Info } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, ReferenceLine, LabelList } from 'recharts';
 import {
+  ActivitySummary,
   useActiveConsultores,
   useLeadsAtribuidosPeriodo,
 } from '../hooks/useConsistenciaData';
-import { UserActivity } from '../types';
 
 const EXCLUDED_CATEGORIES = new Set(['Tag', 'Vinculacao', 'Outros']);
 
@@ -40,7 +40,7 @@ const FAIXA_COLORS: Record<Row['faixa'], string> = {
 };
 
 interface Props {
-  activities: UserActivity[];
+  summary: ActivitySummary[];
   selectedUsers: string[];
   dateRange: { from: Date; to: Date };
 }
@@ -49,7 +49,7 @@ function toDateStr(d: Date): string {
   return d.toISOString().split('T')[0];
 }
 
-export function RankingPercentilBlock({ activities, selectedUsers, dateRange }: Props) {
+export function RankingPercentilBlock({ summary, selectedUsers, dateRange }: Props) {
   const fromStr = toDateStr(dateRange.from);
   const toStr = toDateStr(dateRange.to);
   const { data: consultores = [], isLoading: loadingUsers } = useActiveConsultores();
@@ -59,9 +59,9 @@ export function RankingPercentilBlock({ activities, selectedUsers, dateRange }: 
     if (consultores.length === 0) return { rows: [], p25: 0, p50: 0, p75: 0 };
 
     const acoesCount = new Map<number, number>();
-    for (const a of activities) {
+    for (const a of summary) {
       if (EXCLUDED_CATEGORIES.has(a.category)) continue;
-      acoesCount.set(a.user_id, (acoesCount.get(a.user_id) || 0) + a.activity_count);
+      acoesCount.set(a.user_id, (acoesCount.get(a.user_id) || 0) + a.total);
     }
 
     const base = consultores.map((u) => {
@@ -93,7 +93,7 @@ export function RankingPercentilBlock({ activities, selectedUsers, dateRange }: 
     });
 
     return { rows, p25: p25v, p50: p50v, p75: p75v };
-  }, [consultores, activities, leadsAtribuidos]);
+  }, [consultores, summary, leadsAtribuidos]);
 
   const displayedRows = useMemo(() => {
     if (selectedUsers.length === 0) return rows;

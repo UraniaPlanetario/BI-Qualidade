@@ -617,6 +617,33 @@ GROUP BY i.user_id;
 
 **Consumido por:** `useLeadsAtribuidosPeriodo` em [src/areas/comercial/monitoramento/hooks/useConsistenciaData.ts](../src/areas/comercial/monitoramento/hooks/useConsistenciaData.ts).
 
+### `gold.activities_summary_periodo(p_from, p_to) → TABLE(user_id, user_name, role_name, category, event_type, total, dias_com_atividade)`
+
+RPC agregada que substitui a paginação de `gold.user_activities_humanas` para os blocos que não precisam de granularidade por hora (Visão Geral, Consistência CRM, Ranking por Percentil).
+
+**Por que existe:** fetchar a view paginando 1.000 linhas por vez custava ~34 requisições sequenciais (~10-15s) para um mês. A RPC devolve em média ~900 linhas pré-agregadas em <1s.
+
+**Campo `dias_com_atividade`:** contagem de dias distintos (`activity_date`) com alguma atividade no período, repetido em todas as linhas (via `CROSS JOIN`). Usado para a KPI "Média por Dia" do Overview.
+
+```sql
+WITH meta AS (
+  SELECT COUNT(DISTINCT activity_date)::int AS dias
+  FROM gold.user_activities_humanas
+  WHERE activity_date >= p_from::date AND activity_date <= p_to::date
+)
+SELECT uad.user_id, uad.user_name, uad.role_name, uad.category, uad.event_type,
+       SUM(uad.activity_count)::bigint AS total,
+       m.dias AS dias_com_atividade
+FROM gold.user_activities_humanas uad
+CROSS JOIN meta m
+WHERE uad.activity_date >= p_from::date AND uad.activity_date <= p_to::date
+GROUP BY uad.user_id, uad.user_name, uad.role_name, uad.category, uad.event_type, m.dias;
+```
+
+**Consumida por:** `useActivitiesSummary` em [`monitoramento/hooks/useConsistenciaData.ts`](../src/areas/comercial/monitoramento/hooks/useConsistenciaData.ts).
+
+**UserDetailBlock** continua consumindo `gold.user_activities_humanas` bruta via `useActivitiesData` — carregada lazy só quando a aba "Por Usuário" é ativada.
+
 ### `gold.mensagens_por_user_lead(p_from, p_to) → TABLE(user_id, total_msgs, leads_distintos)`
 
 Conta, por usuário, total de mensagens enviadas e leads únicos que receberam mensagem no período. Lê de `gold.cubo_historico_mensagens` com `tipo='enviada'`.
