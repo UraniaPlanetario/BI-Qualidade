@@ -14,7 +14,6 @@ import {
 import {
   useActiveConsultores,
   useClosedLeadsPeriodo,
-  useCamposAlteradosFiltered,
   useLeadsAtribuidosPeriodo,
 } from '../hooks/useConsistenciaData';
 import {
@@ -25,7 +24,7 @@ import {
   ClassificacaoCRM,
 } from '../types';
 
-const EXCLUDED_CATEGORIES = new Set(['Tag', 'Vinculacao', 'Outros', 'Campo alterado']);
+const EXCLUDED_CATEGORIES = new Set(['Tag', 'Vinculacao', 'Outros']);
 
 const TOOLTIP_STYLE = {
   contentStyle: { backgroundColor: 'hsl(240, 10%, 10%)', border: 'none', borderRadius: 8 },
@@ -62,7 +61,6 @@ export function ConsistenciaCRMBlock({ activities, selectedUsers, dateRange }: P
 
   const { data: consultores = [], isLoading: loadingUsers } = useActiveConsultores();
   const { data: closedLeads = [], isLoading: loadingClosed } = useClosedLeadsPeriodo(fromStr, toStr);
-  const { data: camposFiltered = {}, isLoading: loadingCampos } = useCamposAlteradosFiltered(fromStr, toStr);
   const { data: leadsAtribuidos = {}, isLoading: loadingAtrib } = useLeadsAtribuidosPeriodo(fromStr, toStr);
 
   const allRows = useMemo<ConsistenciaVendedor[]>(() => {
@@ -83,10 +81,6 @@ export function ConsistenciaCRMBlock({ activities, selectedUsers, dateRange }: P
     for (const a of activities) {
       if (EXCLUDED_CATEGORIES.has(a.category)) continue;
       acoesPorVendedor.set(a.user_id, (acoesPorVendedor.get(a.user_id) || 0) + a.activity_count);
-    }
-    for (const [uidStr, count] of Object.entries(camposFiltered)) {
-      const uid = Number(uidStr);
-      acoesPorVendedor.set(uid, (acoesPorVendedor.get(uid) || 0) + count);
     }
 
     const out: ConsistenciaVendedor[] = [];
@@ -109,7 +103,7 @@ export function ConsistenciaCRMBlock({ activities, selectedUsers, dateRange }: P
       });
     }
     return out.sort((a, b) => b.acoes_por_lead - a.acoes_por_lead);
-  }, [consultores, closedLeads, activities, camposFiltered, leadsAtribuidos]);
+  }, [consultores, closedLeads, activities, leadsAtribuidos]);
 
   const rows = useMemo(() => {
     if (selectedUsers.length === 0) return allRows;
@@ -128,7 +122,7 @@ export function ConsistenciaCRMBlock({ activities, selectedUsers, dateRange }: P
     return counts;
   }, [rows]);
 
-  const loading = loadingUsers || loadingClosed || loadingCampos || loadingAtrib;
+  const loading = loadingUsers || loadingClosed || loadingAtrib;
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -190,10 +184,10 @@ export function ConsistenciaCRMBlock({ activities, selectedUsers, dateRange }: P
               </li>
             </ul>
             <p className="mt-1 text-xs">
-              Ações contadas: mensagens, movimentações, ligações, notas, tarefas e campos alterados
-              (excluindo 6 campos automatizados por bots: Etapa do funil, Parar IA WhatsApp/Instagram,
-              Origem da oportunidade, Canal de entrada, tracking 586018). Categorias Tag, Vinculação
-              e Outros excluídas.
+              Ações contadas: mensagens, movimentações, ligações, notas, tarefas criadas/concluídas
+              e alterações em campos da whitelist (ver <code>config.dim_campos</code>). Categorias
+              Tag, Vinculação e Outros excluídas. Task events de edição (texto, prazo, tipo) não
+              contam — só criação e conclusão.
             </p>
           </div>
         </div>

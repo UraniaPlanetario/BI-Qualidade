@@ -369,7 +369,8 @@ LEFT JOIN bronze.kommo_custom_fields kcf ON kcf.id = c.campo_id;
 **Consumida por:**
 - Hook `useAlteracoesSDR` em [`desempenho-sdr/hooks/useDesempenhoSDR.ts`](../src/areas/comercial/desempenho-sdr/hooks/useDesempenhoSDR.ts)
 - Hook `useAlteracoesCampos` em [`desempenho-vendedor/hooks/useDesempenhoVendedor.ts`](../src/areas/comercial/desempenho-vendedor/hooks/useDesempenhoVendedor.ts)
-- RPC `gold.campos_alterados_filtrados_por_user()` (via Consistência CRM)
+- RPC `gold.campos_alterados_filtrados_por_user()` (cache compatível)
+- View `gold.user_activities_humanas` (deriva daqui)
 
 **Vantagem sobre blacklist**: edições na whitelist (`config.dim_campos.incluir`) têm efeito **imediato** — não precisa refresh. Novos campos criados no Kommo aparecem em `bronze.kommo_custom_fields` após o próximo sync, mas entram em `config.dim_campos` com `incluir = false` por default (isolamento seguro).
 
@@ -406,9 +407,35 @@ GROUP BY e.created_by, u.name, u.group_name, DATE(brt), EXTRACT(HOUR FROM brt),
          e.type, e.entity_type;
 ```
 
-⚠️ **Limitação**: a categoria `'Campo alterado'` aqui **inclui** os 6 campos automatizados por bots. Para métricas de consistência individual (Consistência CRM), usamos `gold.campos_alterados_filtrados_por_user()` em substituição.
+⚠️ **Esta tabela ainda contém dados brutos** — todo o Monitoramento de Usuários agora lê a view filtrada [`gold.user_activities_humanas`](#goldu­ser_activities_humanas-view) que exclui campos fora da whitelist e edições de tarefa que não são criação/conclusão.
 
 **Categorias possíveis em `category`:** Mensagem Enviada, Tarefa, Nota, Movimentacao, Campo alterado, Ligacao, E-mail, Outros. Além dessas, o frontend encontra `Tag`, `Vinculacao`, `Conversa`, `Contato/Empresa` em dados legados — não aparecem nas refreshes atuais mas estão mapeadas em `CATEGORY_COLORS` para compatibilidade.
+
+### `gold.user_activities_humanas` (view)
+
+View filtrada sobre `gold.user_activities_daily` aplicando as mesmas regras do Consistência CRM:
+
+- **Campos alterados** — exclui eventos `custom_field_X_value_changed` em que `X` não está em `config.dim_campos.incluir = true`. Resultado: só conta os ~62 campos marcados como ação humana.
+- **Tarefas** — exclui `task_text_changed`, `task_deadline_changed`, `task_type_changed`, `task_deleted` e `task_result_added`. Mantém apenas `task_added` (criação manual) e `task_completed` (conclusão manual).
+
+```sql
+CREATE OR REPLACE VIEW gold.user_activities_humanas AS
+SELECT uad.*
+FROM gold.user_activities_daily uad
+WHERE NOT (
+  (uad.event_type ~ '^custom_field_\d+_value_changed$'
+    AND (substring(uad.event_type from 'custom_field_(\d+)_value_changed')::bigint)
+      NOT IN (SELECT campo_id FROM config.dim_campos WHERE incluir = true))
+  OR uad.event_type IN (
+    'task_text_changed', 'task_deadline_changed', 'task_type_changed',
+    'task_deleted', 'task_result_added'
+  )
+);
+```
+
+**Consumida por:** `useActivitiesData` em [`monitoramento/hooks/useActivitiesData.ts`](../src/areas/comercial/monitoramento/hooks/useActivitiesData.ts) — fonte única para Visão Geral, Por Categoria, Por Usuário, Consistência CRM e Ranking por Percentil.
+
+**Impacto em abril 2026:** 194.035 → 172.212 eventos (redução de ~22k, tirando 601 eventos de campos fora da whitelist e ~21k edições de tarefa).
 
 ### `gold.leads_quality` (~164 linhas)
 

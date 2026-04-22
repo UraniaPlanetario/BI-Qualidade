@@ -17,7 +17,7 @@ export function OverviewBlock({ activities }: { activities: UserActivity[] }) {
     return { total, users, avgPerUser, avgPerDay, days };
   }, [activities]);
 
-  const EXCLUDED = ['Tag', 'Vinculacao'];
+  const EXCLUDED = ['Tag', 'Vinculacao', 'Outros'];
 
   const byCategory = useMemo(() => {
     const map: Record<string, number> = {};

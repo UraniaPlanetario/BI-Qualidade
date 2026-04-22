@@ -9,7 +9,7 @@ const TOOLTIP_STYLE = {
   itemStyle: { color: '#fff' },
 };
 
-const EXCLUDED_CATEGORIES = new Set(['Tag', 'Vinculacao']);
+const EXCLUDED_CATEGORIES = new Set(['Tag', 'Vinculacao', 'Outros']);
 
 interface Props {
   activities: UserActivity[];

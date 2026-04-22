@@ -3,13 +3,11 @@ import { Loader2, Info } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, ReferenceLine, LabelList } from 'recharts';
 import {
   useActiveConsultores,
-  useOpenTasks,
-  useCamposAlteradosFiltered,
   useLeadsAtribuidosPeriodo,
 } from '../hooks/useConsistenciaData';
 import { UserActivity } from '../types';
 
-const EXCLUDED_CATEGORIES = new Set(['Tag', 'Vinculacao', 'Outros', 'Campo alterado']);
+const EXCLUDED_CATEGORIES = new Set(['Tag', 'Vinculacao', 'Outros']);
 
 const TOOLTIP_STYLE = {
   contentStyle: { backgroundColor: 'hsl(240, 10%, 10%)', border: 'none', borderRadius: 8 },
@@ -55,8 +53,6 @@ export function RankingPercentilBlock({ activities, selectedUsers, dateRange }: 
   const fromStr = toDateStr(dateRange.from);
   const toStr = toDateStr(dateRange.to);
   const { data: consultores = [], isLoading: loadingUsers } = useActiveConsultores();
-  const { data: openTasks = [], isLoading: loadingTasks } = useOpenTasks();
-  const { data: camposFiltered = {}, isLoading: loadingCampos } = useCamposAlteradosFiltered(fromStr, toStr);
   const { data: leadsAtribuidos = {}, isLoading: loadingAtrib } = useLeadsAtribuidosPeriodo(fromStr, toStr);
 
   const { rows, p25, p50, p75 } = useMemo(() => {
@@ -66,10 +62,6 @@ export function RankingPercentilBlock({ activities, selectedUsers, dateRange }: 
     for (const a of activities) {
       if (EXCLUDED_CATEGORIES.has(a.category)) continue;
       acoesCount.set(a.user_id, (acoesCount.get(a.user_id) || 0) + a.activity_count);
-    }
-    for (const [uidStr, count] of Object.entries(camposFiltered)) {
-      const uid = Number(uidStr);
-      acoesCount.set(uid, (acoesCount.get(uid) || 0) + count);
     }
 
     const base = consultores.map((u) => {
@@ -101,7 +93,7 @@ export function RankingPercentilBlock({ activities, selectedUsers, dateRange }: 
     });
 
     return { rows, p25: p25v, p50: p50v, p75: p75v };
-  }, [consultores, activities, camposFiltered, leadsAtribuidos]);
+  }, [consultores, activities, leadsAtribuidos]);
 
   const displayedRows = useMemo(() => {
     if (selectedUsers.length === 0) return rows;
@@ -109,7 +101,7 @@ export function RankingPercentilBlock({ activities, selectedUsers, dateRange }: 
     return rows.filter((r) => set.has(r.user_name));
   }, [rows, selectedUsers]);
 
-  const loading = loadingUsers || loadingTasks || loadingCampos || loadingAtrib;
+  const loading = loadingUsers || loadingAtrib;
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">

@@ -15,7 +15,7 @@ const TOOLTIP_STYLE = {
   itemStyle: { color: '#fff' },
 };
 
-const EXCLUDED_CATEGORIES = ['Tag', 'Vinculacao'];
+const EXCLUDED_CATEGORIES = ['Tag', 'Vinculacao', 'Outros'];
 
 const TABS: { id: string; label: string }[] = [
   { id: 'Mensagem Enviada', label: 'Mensagem Enviada' },

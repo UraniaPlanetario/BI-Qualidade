@@ -28,7 +28,7 @@ export function useActivitiesData(filters: MonitoringFilters) {
       while (true) {
         const { data, error } = await supabase
           .schema('gold')
-          .from('user_activities_daily')
+          .from('user_activities_humanas')
           .select('*')
           .gte('activity_date', dateRange.from)
           .lte('activity_date', dateRange.to)

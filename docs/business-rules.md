@@ -289,7 +289,26 @@ Mudanças têm efeito **imediato** — a view `gold.alteracoes_humanas` faz o `J
 
 Toda nova métrica relacionada a "alteração humana" deve consumir `gold.alteracoes_humanas`, nunca `gold.cubo_alteracao_campos_eventos` direto.
 
-**⚠️ Nota:** `gold.user_activities_daily` **continua não filtrando** esses campos (a categoria `'Campo alterado'` agrega todos). Por isso, no Consistência CRM, trocamos a fonte de `'Campo alterado'` para a RPC `campos_alterados_filtrados_por_user()` que já usa `alteracoes_humanas`.
+**Também aplicado em:** `gold.user_activities_humanas` view — fonte única do Monitoramento de Usuários. Filtra tanto campos bot quanto eventos de tarefa que não são criação/conclusão manual.
+
+## Eventos de tarefa contados como ação humana
+
+Do universo `task_*` de eventos no Kommo, o Monitoramento de Usuários só considera:
+
+- `task_added` — tarefa criada manualmente
+- `task_completed` — tarefa concluída manualmente
+
+**Excluídos** (por serem edições de metadata ou ações não-produtivas):
+
+- `task_text_changed` — edição do texto
+- `task_deadline_changed` — mudança de prazo
+- `task_type_changed` — mudança do tipo de tarefa
+- `task_deleted` — exclusão
+- `task_result_added` — adicionar resultado (frequentemente dobra contagem com `task_completed`)
+
+Aplicado na view `gold.user_activities_humanas` (ver [data-model.md](data-model.md#goldu­ser_activities_humanas-view)).
+
+**Filtro de usuário humano:** a tabela-base `gold.user_activities_daily` já faz `JOIN` com `bronze.kommo_users WHERE group_name IN ('SDR','Consultores Inbound') AND is_active = TRUE`, então eventos de automations com `created_by = 0` nunca entram.
 
 ## Deduplicação de passagens de lead
 
