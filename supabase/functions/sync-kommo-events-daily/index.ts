@@ -19,15 +19,39 @@ async function kommoGet(path: string, params: Record<string, string> = {}) {
 }
 
 async function syncUsers() {
-  const data = await kommoGet("/api/v4/users");
+  // 1. Mapa group_id -> group_name (lista de grupos da conta)
+  const groupMap = new Map<number, string>();
+  try {
+    const acct = await kommoGet("/api/v4/account", { with: "users_groups" });
+    const groups = acct?._embedded?.users_groups ?? [];
+    for (const g of groups) groupMap.set(g.id, g.name);
+  } catch (e) {
+    console.warn("syncUsers: falha ao buscar grupos, seguindo sem nomes", e);
+  }
+
+  // 2. Usuários (sem paginação — a conta tem < 250 usuários)
+  const data = await kommoGet("/api/v4/users", { limit: "250" });
   const users = data._embedded?.users ?? [];
-  const records = users.map((u: any) => ({
-    id: u.id,
-    name: u.name,
-    email: u.email,
-    role: u.rights?.is_admin ? "admin" : "user",
-    synced_at: new Date().toISOString(),
-  }));
+  const now = new Date().toISOString();
+  const records = users.map((u: any) => {
+    const gid = u.rights?.group_id ?? null;
+    const isAdmin = u.rights?.is_admin === true;
+    // Kommo marca usuário como "not_free" quando consome licença ativa.
+    // rights.is_free = true → conta free/inativa. Fallback: se rights ausente, considera ativo.
+    const isActive = u.rights ? u.rights.is_free !== true : true;
+    return {
+      id: u.id,
+      name: u.name,
+      email: u.email,
+      role: isAdmin ? "admin" : "user",
+      role_id: u.rights?.role_id ?? null,
+      role_name: u.rights?.role_name ?? null,
+      group_id: gid,
+      group_name: gid != null ? (groupMap.get(gid) ?? null) : null,
+      is_active: isActive,
+      synced_at: now,
+    };
+  });
   const { error } = await supabase.from("kommo_users").upsert(records, { onConflict: "id" });
   if (error) throw new Error("Supabase users: " + error.message);
   return records.length;

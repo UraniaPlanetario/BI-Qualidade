@@ -36,7 +36,8 @@ export function useLeadsFechados() {
           .eq('status_lead', 'Venda Fechada')
           .not('nome_lead', 'is', null)
           .not('data_e_hora_do_agendamento', 'is', null)
-          .neq('tipo_lead', 'Shoppings')
+          // PostgREST `.neq` filtra NULLs — usar .or pra incluí-los (tipo_lead pode ser null)
+          .or('tipo_lead.is.null,tipo_lead.neq.Shoppings')
           .gte('data_e_hora_do_agendamento', `${CURRENT_YEAR}-01-01`)
           .lte('data_e_hora_do_agendamento', `${CURRENT_YEAR}-12-31T23:59:59`)
           .range(from, from + pageSize - 1);

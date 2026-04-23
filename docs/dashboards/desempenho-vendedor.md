@@ -32,10 +32,11 @@ await supabase
   .from('kommo_users')
   .select('name')
   .eq('is_active', true)
-  .eq('group_name', 'Consultores Inbound')
   .order('name');
 ```
-Retorna `string[]` com nomes. Cache 30min.
+Retorna `string[]` com nomes de todos os usuários ativos do Kommo. Cache 30min.
+
+**Por que não filtrar por `group_name='Consultores Inbound'`?** Porque `vendedor` é um custom field editável (não o grupo), e vendedores em plantão/almoço frequentemente são de outros grupos (Outbound, CS, etc.). A regra v3 em `gold.refresh_leads_consolidado` já garante que o `vendedor` atribuído a cada lead é o efetivo. Ver [business-rules.md — Sobre `vendedor`](../business-rules.md#sobre-vendedor-cubo_leads_consolidadovendedor).
 
 ### `useLeadsVendedor()` — leads com `vendedor` preenchido
 

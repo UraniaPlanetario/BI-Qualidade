@@ -52,6 +52,22 @@ END AS status_lead
 - **`status_name`** é o estágio atual (ex.: `'Negociação'`, `'Lost'`, `'Venda perdida'`) — o `ILIKE '%perdida%'` é proposital para pegar variações de nomenclatura.
 - **"Venda Fechada" exige ambas as condições**: estar em pipeline de pós-venda **E** ter Data de Fechamento. Se só está no funil mas sem a data, fica `'Em andamento'`; se só tem a data mas está em outro funil, também.
 
+### Sobre `vendedor` (`cubo_leads_consolidado.vendedor`)
+
+O campo **não** é `l.custom_fields->>'Vendedor/Consultor'` direto. A função `gold.refresh_leads_consolidado` aplica uma **regra de precedência tripla** (v3) para decidir o vendedor efetivo de cada lead:
+
+| Ordem | Fonte | Quando |
+|---|---|---|
+| 1º | `config.lead_vendedor_override.vendedor` | Override manual cadastrado — sempre ganha |
+| 2º | `moved_by` do último `Closed - won` em **funil de vendas** (não pós-venda) | Se alguém do grupo `'Sucesso do cliente'` alterou o custom field `Vendedor/Consultor` **depois** da saída do onboarding |
+| 3º | `custom_fields->>'Vendedor/Consultor'` | Padrão — valor atual no Kommo |
+
+**Motivação:** o campo `Vendedor/Consultor` é editável por qualquer usuário do Kommo. Quando o lead entra em `Clientes - CS`, o time de CS frequentemente altera esse campo para si mesmo (tomando o crédito da venda pra continuar atendendo o cliente). A regra v3 detecta esse padrão e devolve o vendedor real (quem efetivamente bateu Closed-won).
+
+**"Saída do onboarding"** é a primeira movimentação com `pipeline_from ∈ ('Onboarding Escolas','Onboarding SME','Financeiro')` para um funil **fora** do conjunto pós-venda — tipicamente `pipeline_to = 'Clientes - CS'`.
+
+**Casos de borda históricos** (leads pré-2026-01 sem histórico de events, ou correções manuais erradas no CRM): registra-se em `config.lead_vendedor_override` com `lead_id`, `vendedor`, `motivo`. Precedência máxima. Daqui em diante, com o sync diário capturando alterações em tempo hábil, essa tabela deve crescer muito pouco.
+
 ### Sobre `data_de_fechamento`
 
 Em `gold.cubo_leads_consolidado`, é parseado de `custom_fields.'Data de Fechamento'` como Unix epoch:
@@ -75,17 +91,24 @@ Definidos em `FIM_FUNIL_ESTAGIOS` em [`monitoramento/types.ts`](../src/areas/com
 
 ## Grupos de usuários
 
-Em `bronze.kommo_users.group_name`:
-- **`Consultores Inbound`** — vendedores que atendem inbound (tratados como "vendedor" nos dashboards)
-- **`SDR`** — qualificação inicial de leads
+Em `bronze.kommo_users.group_name` (populado via `/api/v4/account?with=users_groups` no sync diário):
+- `Consultores Inbound` (group_id 622096) — vendedores inbound
+- `Consultores Outbound` (group_id 690324)
+- `SDR` (group_id 645176)
+- `Onboarding / Financeiro` (group_id 645284)
+- `Sucesso do cliente` (group_id 645288) — CS
+- `Planetários`, `Administrativo`, `Tecnologia e Processos`, `Marketing`, etc.
 
-Filtro padrão em todos os dashboards operacionais:
+### Quem conta como "vendedor" nos dashboards?
 
+Como `vendedor` é um **custom field editável** (não o grupo do Kommo), usamos **todos os usuários ativos** (`bronze.kommo_users.is_active = true`) como whitelist. Leads atribuídos a pessoas fora dos grupos de consultores (ex: Karen em "Sucesso do cliente" atuando num plantão) contam desde que a pessoa ainda esteja ativa. Vendedores desligados são excluídos.
+
+Ver `useVendedoresAtivos` em [`desempenho-vendedor/hooks/useDesempenhoVendedor.ts`](../src/areas/comercial/desempenho-vendedor/hooks/useDesempenhoVendedor.ts).
+
+### SDR
+`SDR` continua filtrando explicitamente por grupo:
 ```ts
-.eq('is_active', true)
-.eq('group_name', 'Consultores Inbound')   // para vendedor
-// ou
-.eq('group_name', 'SDR')                    // para SDR
+.eq('is_active', true).eq('group_name', 'SDR')
 ```
 
 ## Janela de horário comercial
