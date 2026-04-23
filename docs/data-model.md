@@ -270,8 +270,13 @@ Histórico de mudanças de estágio/funil. Uma linha por evento `lead_status_cha
 | `status_to_id`/`status_to` | `value_after[0].lead_status.id` |
 | `moved_by_id`/`moved_by` | `created_by` + JOIN `kommo_users` |
 | `moved_at` | `created_at` |
+| `responsible_user_id`/`responsible_user` | Snapshot: último `entity_responsible_changed.value_after` com `created_at <= moved_at` (via subquery no refresh). Backfill feito pra ~77% dos movimentos — os 23% restantes são leads antigos sem histórico de `entity_responsible_changed`. |
+| `vendedor_custom` | Snapshot de `kommo_leads_raw.custom_fields->>'Vendedor/Consultor'` no momento em que o refresh roda. Preenchido apenas prospectivamente (histórico não recuperável — Kommo Events API não retorna `value_before/after` pra `custom_field_*_value_changed`). |
+| `sdr_custom` | Mesmo padrão do `vendedor_custom`, mas para `custom_fields->>'SDR'`. |
 
-**Índices:** `lead_id`, `moved_at DESC`, `pipeline_to_id`, `event_id` unique.
+**Índices:** `lead_id`, `moved_at DESC`, `pipeline_to_id`, `event_id` unique, `(lead_id, moved_at)`.
+
+**Refresh incremental:** desde 2026-04-23 (migration 022), o `refresh_leads_movements()` usa `INSERT ... ON CONFLICT (event_id) DO NOTHING` em vez de TRUNCATE. Isso preserva os snapshots de `vendedor_custom`/`sdr_custom` capturados em refreshes anteriores.
 
 ### `gold.cubo_historico_mensagens` (~1,1M linhas)
 
