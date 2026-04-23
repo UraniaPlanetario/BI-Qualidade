@@ -72,6 +72,9 @@ O campo **não** é `l.custom_fields->>'Vendedor/Consultor'` direto. A função 
 **Exemplos de overrides ativos:**
 - `19377171` — APMF Escola São Sebastião → Catarine Manara (histórico pré-2026-01)
 - `24595621` — Colégio CEOC → Rafael Araújo (plantão: Juliana bateu Closed-won, Rafael era o real)
+- Bulk 2026 (10 leads) — overrides baseados em XLSX exportado do Kommo antes da automação/CS alterar o CF. Ver [migration 021](../supabase/migrations/021_bulk_overrides_xlsx_2026.sql).
+
+**Validação feita em 2026-04-23:** comparando cubo pós-v4+overrides com XLSX "leads fechados em 2026" (448 leads), zero divergências de vendedor. O gap de 8 leads (440 BI vs 448 XLSX) é explicado por regra de negócio: 7 cancelados + 1 em funil "Equipes" + 1 que voltou pra Vendas (data_de_fechamento limpa).
 
 ### Sobre `data_de_fechamento`
 
