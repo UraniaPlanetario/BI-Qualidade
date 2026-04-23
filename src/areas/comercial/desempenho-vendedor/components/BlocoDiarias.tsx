@@ -126,7 +126,10 @@ export function BlocoDiarias({ leads }: { leads: LeadVendedor[] }) {
             <Tooltip {...TOOLTIP_STYLE} />
             <Legend wrapperStyle={{ fontSize: 12, color: 'hsl(240, 5%, 65%)' }} />
             {topVendedores.map((v, i) => (
-              <Bar key={v} dataKey={v} fill={COLORS[i % COLORS.length]} radius={[4, 4, 0, 0]} />
+              <Bar key={v} dataKey={v} fill={COLORS[i % COLORS.length]} radius={[4, 4, 0, 0]}>
+                <LabelList dataKey={v} position="top" fill="hsl(240, 5%, 75%)" fontSize={10} fontWeight={600}
+                  formatter={(val: number) => val > 0 ? val : ''} />
+              </Bar>
             ))}
           </BarChart>
         </ResponsiveContainer>
