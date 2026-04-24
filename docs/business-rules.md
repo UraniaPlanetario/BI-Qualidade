@@ -118,7 +118,12 @@ Em `bronze.kommo_users.group_name` (populado via `/api/v4/account?with=users_gro
 
 ### Quem conta como "vendedor" nos dashboards?
 
-Como `vendedor` é um **custom field editável** (não o grupo do Kommo), usamos **todos os usuários ativos** (`bronze.kommo_users.is_active = true`) como whitelist. Leads atribuídos a pessoas fora dos grupos de consultores (ex: Karen em "Sucesso do cliente" atuando num plantão) contam desde que a pessoa ainda esteja ativa. Vendedores desligados são excluídos.
+Whitelist em `useVendedoresAtivos` = usuários ativos em um destes **3 grupos** do Kommo:
+- `Consultores Inbound`
+- `Consultores Outbound`
+- `Sucesso do cliente`
+
+Qualquer usuário de outro grupo (Administrativo, Marketing, Onboarding/Financeiro, Parceiros, Planetários, Projetores, Tecnologia e Processos) **não aparece** em Desempenho Vendedor, mesmo que esteja preenchido no custom field `Vendedor/Consultor` de algum lead — é excluído na camada do frontend.
 
 Ver `useVendedoresAtivos` em [`desempenho-vendedor/hooks/useDesempenhoVendedor.ts`](../src/areas/comercial/desempenho-vendedor/hooks/useDesempenhoVendedor.ts).
 

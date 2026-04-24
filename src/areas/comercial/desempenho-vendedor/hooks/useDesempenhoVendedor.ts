@@ -5,20 +5,23 @@ import { useMemo } from 'react';
 
 const FUNIS_FECHADOS = ['Onboarding Escolas', 'Onboarding SME', 'Financeiro', 'Clientes - CS', 'Shopping Fechados'];
 
+/** Grupos Kommo que podem aparecer como "vendedor" em Desempenho Vendedor. */
+export const GRUPOS_VENDEDOR = [
+  'Consultores Inbound',
+  'Consultores Outbound',
+  'Sucesso do cliente',
+] as const;
+
 export function useVendedoresAtivos() {
   return useQuery<string[]>({
     queryKey: ['vendedores_ativos'],
     queryFn: async () => {
-      // Quem é "vendedor" vem do custom field 'Vendedor/Consultor' no Kommo, não do grupo/rights.
-      // Retornamos todos os usuários Kommo ativos — quem aparece como vendedor em algum lead
-      // fechado é filtrado naturalmente pela junção com o cubo.
-      // Obs: usuários inativos (ex: desligados) continuam excluídos pois não devem aparecer nas
-      // comparações entre pares.
       const { data, error } = await supabase
         .schema('bronze')
         .from('kommo_users')
         .select('name')
         .eq('is_active', true)
+        .in('group_name', GRUPOS_VENDEDOR as unknown as string[])
         .order('name');
       if (error) throw error;
       return (data || []).map((u: any) => u.name as string);
