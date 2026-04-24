@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/lib/supabase';
 import { Loader2, ArrowLeft, Eye, EyeOff } from 'lucide-react';
@@ -7,6 +8,7 @@ import logoUrania from '@/assets/logo-urania.png';
 type Mode = 'login' | 'forgot';
 
 export default function Login() {
+  const navigate = useNavigate();
   const { signIn } = useAuth();
   const [mode, setMode] = useState<Mode>('login');
   const [email, setEmail] = useState('');
@@ -22,6 +24,7 @@ export default function Login() {
     setLoading(true);
     try {
       await signIn(email, password);
+      navigate('/', { replace: true });
     } catch (err: any) {
       setError(err.message || 'Erro ao fazer login');
     } finally {

@@ -81,11 +81,7 @@ export function GlobalSidebar({ onLogout }: GlobalSidebarProps) {
   const location = useLocation();
   const { user, isGlobalAdmin } = useAuth();
   const { isFavorite, toggleFavorite } = useUserPreferences(user?.id);
-  const [expanded, setExpanded] = useState<Record<string, boolean>>({
-    comercial: true,
-    'qualidade-grp': true,
-    'desempenho-grp': true,
-  });
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
 
   const toggleExpand = (id: string) => setExpanded((prev) => ({ ...prev, [id]: !prev[id] }));
   const isActive = (path: string) => location.pathname.startsWith(path);
