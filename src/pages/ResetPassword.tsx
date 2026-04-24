@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
-import { Loader2, CheckCircle2 } from 'lucide-react';
+import { Loader2, CheckCircle2, Eye, EyeOff } from 'lucide-react';
 import logoUrania from '@/assets/logo-urania.png';
 
 export default function ResetPassword() {
@@ -12,6 +12,7 @@ export default function ResetPassword() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [sessionReady, setSessionReady] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
     // O Supabase processa o token automaticamente quando a página carrega
@@ -86,24 +87,37 @@ export default function ResetPassword() {
                 Escolha uma senha com pelo menos 8 caracteres.
               </p>
             </div>
-            <input
-              type="password"
-              placeholder="Nova senha"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-              required
-              minLength={8}
-            />
-            <input
-              type="password"
-              placeholder="Confirmar senha"
-              value={confirm}
-              onChange={(e) => setConfirm(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-              required
-              minLength={8}
-            />
+            <div className="relative">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                placeholder="Nova senha"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full px-3 py-2 pr-10 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                required
+                minLength={8}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((s) => !s)}
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground"
+                tabIndex={-1}
+                aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+              >
+                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
+            <div className="relative">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                placeholder="Confirmar senha"
+                value={confirm}
+                onChange={(e) => setConfirm(e.target.value)}
+                className="w-full px-3 py-2 pr-10 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                required
+                minLength={8}
+              />
+            </div>
             {error && <p className="text-destructive text-sm text-center">{error}</p>}
             <button
               type="submit"
