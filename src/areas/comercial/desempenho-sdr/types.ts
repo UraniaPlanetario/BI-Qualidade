@@ -49,6 +49,7 @@ export interface MovimentoLead {
   moved_by: string | null;
   moved_by_id: number | null;
   moved_at: string;
+  lead_created_at?: string | null;
 }
 
 /**

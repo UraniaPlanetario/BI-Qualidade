@@ -274,6 +274,36 @@ export function useMovimentosQualificacao(dateFrom: string | null, dateTo: strin
   });
 }
 
+/** Mapa lead_id → SDR (custom field). Usado pra atribuir qualificações ao SDR correto. */
+export function useLeadsSDRMap() {
+  return useQuery<Map<number, string>>({
+    queryKey: ['leads_sdr_map'],
+    queryFn: async () => {
+      const map = new Map<number, string>();
+      let from = 0;
+      const pageSize = 1000;
+      while (true) {
+        const { data, error } = await supabase
+          .schema('gold')
+          .from('cubo_leads_consolidado')
+          .select('id_lead, sdr')
+          .not('sdr', 'is', null)
+          .neq('sdr', '')
+          .range(from, from + pageSize - 1);
+        if (error) throw error;
+        if (!data || data.length === 0) break;
+        for (const r of data as { id_lead: number; sdr: string | null }[]) {
+          if (r.sdr) map.set(r.id_lead, r.sdr.trim());
+        }
+        if (data.length < pageSize) break;
+        from += pageSize;
+      }
+      return map;
+    },
+    staleTime: 10 * 60 * 1000,
+  });
+}
+
 export function useMovimentosSDR(dateFrom: string | null, dateTo: string | null) {
   return useQuery<MovimentoLead[]>({
     queryKey: ['sdr_movimentos', dateFrom, dateTo],
@@ -288,6 +318,35 @@ export function useMovimentosSDR(dateFrom: string | null, dateTo: string | null)
           .select('lead_id, pipeline_from, pipeline_to, status_to, status_to_id, moved_by, moved_by_id, moved_at');
         if (dateFrom) q = q.gte('moved_at', dateFrom);
         if (dateTo) q = q.lte('moved_at', dateTo + 'T23:59:59');
+        const { data, error } = await q.range(from, from + pageSize - 1);
+        if (error) throw error;
+        if (!data || data.length === 0) break;
+        all.push(...data as MovimentoLead[]);
+        if (data.length < pageSize) break;
+        from += pageSize;
+      }
+      return all;
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+/** Movimentos de leads CRIADOS no período — filtra por `lead_created_at` (não `moved_at`).
+ *  Útil para métricas de funil onde a base é "leads que nasceram no canal X no período". */
+export function useMovimentosLeadsCriados(dateFrom: string | null, dateTo: string | null) {
+  return useQuery<MovimentoLead[]>({
+    queryKey: ['sdr_movimentos_leads_criados', dateFrom, dateTo],
+    queryFn: async () => {
+      const all: MovimentoLead[] = [];
+      let from = 0;
+      const pageSize = 1000;
+      while (true) {
+        let q = supabase
+          .schema('gold')
+          .from('leads_movements')
+          .select('lead_id, pipeline_from, pipeline_to, status_to, status_to_id, moved_by, moved_by_id, moved_at, lead_created_at');
+        if (dateFrom) q = q.gte('lead_created_at', dateFrom);
+        if (dateTo) q = q.lte('lead_created_at', dateTo + 'T23:59:59');
         const { data, error } = await q.range(from, from + pageSize - 1);
         if (error) throw error;
         if (!data || data.length === 0) break;

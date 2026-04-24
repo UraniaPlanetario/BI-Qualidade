@@ -25,6 +25,7 @@ import {
   useAlteracoesResumo,
   useAlteracoesDiaria,
   useMovimentosSDR,
+  useMovimentosLeadsCriados,
 } from '../hooks/useDesempenhoSDR';
 import { SDRFilters } from '../types';
 import { Bloco1Geral } from '../components/Bloco1Geral';
@@ -464,6 +465,13 @@ export default function DesempenhoSDRDashboard() {
     error: errorMovimentos,
   } = useMovimentosSDR(dateFromISO, dateToISO);
 
+  // Pro Bloco5 (Qualificação) usamos movimentos de leads CRIADOS no período — base
+  // correta é "leads nascidos no canal", não leads que só transitaram por ele.
+  const {
+    data: movimentosLeadsCriados = [],
+    isLoading: loadingMovCriados,
+  } = useMovimentosLeadsCriados(dateFromISO, dateToISO);
+
   const isLoading =
     loadingSdrs ||
     loadingMetas ||
@@ -471,7 +479,8 @@ export default function DesempenhoSDRDashboard() {
     loadingMensagens ||
     loadingAltResumo ||
     loadingAltDiaria ||
-    loadingMovimentos;
+    loadingMovimentos ||
+    loadingMovCriados;
   const error =
     errorSdrs || errorMetas || errorMults || errorMensagens || errorAltResumo || errorAltDiaria || errorMovimentos;
 
@@ -671,7 +680,7 @@ export default function DesempenhoSDRDashboard() {
           />
         )}
         {activeTab === 'qualificacao' && (
-          <Bloco5Qualificacao movimentos={movimentos} leads={[]} sdrs={filteredSdrs} />
+          <Bloco5Qualificacao movimentos={movimentosLeadsCriados} leads={[]} sdrs={filteredSdrs} />
         )}
       </div>
     </div>

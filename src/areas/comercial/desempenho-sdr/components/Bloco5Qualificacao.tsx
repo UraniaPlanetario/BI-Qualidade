@@ -13,6 +13,7 @@ import {
   CartesianGrid,
 } from 'recharts';
 import { MovimentoLead, SDR, formatNumber, formatPct, isQualificadoSDRById } from '../types';
+import { useLeadsSDRMap } from '../hooks/useDesempenhoSDR';
 import { TOOLTIP_STYLE, COLORS } from './_helpers';
 
 interface Props {
@@ -41,18 +42,33 @@ interface CanalStats {
 export function Bloco5Qualificacao({ movimentos, sdrs }: Props) {
   const sdrNames = useMemo(() => new Set(sdrs.map((s) => s.nome)), [sdrs]);
   const [canal, setCanal] = useState<Canal>('geral');
+  const { data: sdrMap } = useLeadsSDRMap();
 
-  // Classifica cada lead: qual é o canal de entrada dele no período
+  // Classifica cada lead: qual é o canal onde ele foi CRIADO.
+  // Pré-requisito do prop `movimentos`: já vem filtrado por lead_created_at no período
+  // (via useMovimentosLeadsCriados). Base = leads nascidos no canal.
   const stats = useMemo<Record<Canal, CanalStats>>(() => {
-    // Entradas no período por canal
-    const insta = new Set<number>();       // entrou em Recepção Leads Insta
-    const whatsapp = new Set<number>();    // entrou em Vendas WhatsApp sem ter passado por Insta antes no período
+    const insta = new Set<number>();     // lead criado em Recepção Leads Insta
+    const whatsapp = new Set<number>();  // lead criado em Vendas WhatsApp
 
+    // Primeiro movimento de cada lead (por ordem cronológica dos dados recebidos)
+    const firstMovByLead = new Map<number, MovimentoLead>();
     for (const m of movimentos) {
-      if (m.pipeline_to === RECEPCAO) insta.add(m.lead_id);
+      const cur = firstMovByLead.get(m.lead_id);
+      if (!cur || new Date(m.moved_at) < new Date(cur.moved_at)) firstMovByLead.set(m.lead_id, m);
     }
-    for (const m of movimentos) {
-      if (m.pipeline_to === VENDAS_WPP && !insta.has(m.lead_id)) whatsapp.add(m.lead_id);
+    for (const [leadId, m] of firstMovByLead) {
+      // Lead "criado" em um pipeline = primeiro movimento com pipeline_from NULL
+      // (Kommo grava um evento sintético de criação). Alternativa: se o primeiro
+      // movimento conhecido já é em Insta/Vendas, assume criação lá.
+      if (m.pipeline_from === null) {
+        if (m.pipeline_to === RECEPCAO) insta.add(leadId);
+        else if (m.pipeline_to === VENDAS_WPP) whatsapp.add(leadId);
+      } else {
+        // Fallback: considerar o primeiro pipeline observado
+        if (m.pipeline_from === RECEPCAO || m.pipeline_to === RECEPCAO) insta.add(leadId);
+        else if (m.pipeline_from === VENDAS_WPP || m.pipeline_to === VENDAS_WPP) whatsapp.add(leadId);
+      }
     }
     const geral = new Set<number>([...insta, ...whatsapp]);
 
@@ -61,21 +77,26 @@ export function Bloco5Qualificacao({ movimentos, sdrs }: Props) {
       (m.pipeline_from === RECEPCAO && m.pipeline_to === VENDAS_WPP) ||
       isQualificadoSDRById(m.status_to_id);
 
-    const qualificados = new Set<number>();
+    // Lead qualificado → SDR via custom field (cubo_leads_consolidado.sdr).
+    // Se o lead não tem SDR preenchido, fica fora do cômputo "por SDR".
+    const qualificados = new Set<number>();            // todos qualificados (inclui sem SDR)
+    const qualificadosComSdr = new Set<number>();       // qualificados com SDR identificado
     const qualPorSdrAll: Record<string, Set<number>> = {};
     for (const m of movimentos) {
       if (!isQualMov(m)) continue;
       qualificados.add(m.lead_id);
-      const s = m.moved_by;
-      if (s && sdrNames.has(s)) {
-        if (!qualPorSdrAll[s]) qualPorSdrAll[s] = new Set();
-        qualPorSdrAll[s].add(m.lead_id);
+      const sdr = sdrMap?.get(m.lead_id);
+      if (sdr && sdrNames.has(sdr)) {
+        qualificadosComSdr.add(m.lead_id);
+        if (!qualPorSdrAll[sdr]) qualPorSdrAll[sdr] = new Set();
+        qualPorSdrAll[sdr].add(m.lead_id);
       }
     }
 
     const build = (leadsSet: Set<number>): CanalStats => {
+      // Numerador: apenas qualificações com SDR identificado (gráfico de desempenho de SDRs)
       const q = new Set<number>();
-      for (const id of qualificados) if (leadsSet.has(id)) q.add(id);
+      for (const id of qualificadosComSdr) if (leadsSet.has(id)) q.add(id);
       const qSdr: Record<string, Set<number>> = {};
       for (const [sdr, ids] of Object.entries(qualPorSdrAll)) {
         const inter = new Set<number>();
@@ -83,30 +104,31 @@ export function Bloco5Qualificacao({ movimentos, sdrs }: Props) {
         if (inter.size > 0) qSdr[sdr] = inter;
       }
 
-      // Série mensal — distribui por mês do movimento de entrada / qualificação.
-      // Sem exigir cross-month: um lead recebido em mar e qualificado em abr conta
-      // como "qualificado em abr" (taxa de abril) e "recebido em mar" (denominador
-      // de mar). Reflete fluxo real.
+      // Série mensal — bucket pelo mês de CRIAÇÃO do lead (denominador coerente com a base).
       const recebidosPorMes: Record<string, Set<number>> = {};
+      // Mapa lead_id → created_at (usa o primeiro movimento)
+      const createdByLead = new Map<number, string>();
       for (const m of movimentos) {
-        const entrou =
-          (leadsSet === insta && m.pipeline_to === RECEPCAO) ||
-          (leadsSet === whatsapp && m.pipeline_to === VENDAS_WPP && !insta.has(m.lead_id)) ||
-          (leadsSet === geral &&
-            (m.pipeline_to === RECEPCAO ||
-              (m.pipeline_to === VENDAS_WPP && !insta.has(m.lead_id))));
-        if (!entrou) continue;
         if (!leadsSet.has(m.lead_id)) continue;
-        const d = new Date(m.moved_at);
+        const created = m.lead_created_at || m.moved_at;
+        if (!createdByLead.has(m.lead_id)) createdByLead.set(m.lead_id, created);
+      }
+      for (const [leadId, created] of createdByLead) {
+        const d = new Date(created);
         const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
         if (!recebidosPorMes[key]) recebidosPorMes[key] = new Set();
-        recebidosPorMes[key].add(m.lead_id);
+        recebidosPorMes[key].add(leadId);
       }
+
+      // Qualificados por mês (mesmo mês de criação do lead)
       const qualPorMes: Record<string, Set<number>> = {};
       for (const m of movimentos) {
         if (!isQualMov(m)) continue;
         if (!leadsSet.has(m.lead_id)) continue;
-        const d = new Date(m.moved_at);
+        if (!qualificadosComSdr.has(m.lead_id)) continue;
+        const created = createdByLead.get(m.lead_id);
+        if (!created) continue;
+        const d = new Date(created);
         const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
         if (!qualPorMes[key]) qualPorMes[key] = new Set();
         qualPorMes[key].add(m.lead_id);
@@ -133,7 +155,7 @@ export function Bloco5Qualificacao({ movimentos, sdrs }: Props) {
       whatsapp: build(whatsapp),
       geral: build(geral),
     };
-  }, [movimentos, sdrNames]);
+  }, [movimentos, sdrNames, sdrMap]);
 
   const atual = stats[canal];
   const total = atual.leadsRecebidos.size;
@@ -158,7 +180,8 @@ export function Bloco5Qualificacao({ movimentos, sdrs }: Props) {
         </h2>
         <p className="text-xs text-muted-foreground mb-3">
           Qualificado = lead movido de <strong>Recepção Leads Insta → Vendas WhatsApp</strong> ou que
-          passou pela etapa <strong>Qualificado SDR</strong> no funil de Vendas WhatsApp (status_id imune a renames).
+          passou pela etapa <strong>Qualificado SDR</strong> no funil de Vendas WhatsApp. Numerador considera
+          apenas leads com o custom field <code>SDR</code> preenchido (qualificações atribuídas a um SDR humano).
         </p>
 
         {/* Tabs de canal */}
@@ -192,15 +215,15 @@ export function Bloco5Qualificacao({ movimentos, sdrs }: Props) {
           <p className="text-sm text-muted-foreground">Leads Recebidos</p>
           <p className="text-4xl font-bold text-foreground">{formatNumber(total)}</p>
           <p className="text-xs text-muted-foreground mt-1">
-            {canal === 'insta' && 'Entradas em Recepção Leads Insta'}
-            {canal === 'whatsapp' && 'Entradas em Vendas WhatsApp (sem vir do Insta)'}
-            {canal === 'geral' && 'Soma Insta + WhatsApp'}
+            {canal === 'insta' && 'Leads criados em Recepção Leads Insta'}
+            {canal === 'whatsapp' && 'Leads criados em Vendas WhatsApp'}
+            {canal === 'geral' && 'Soma Insta + WhatsApp (leads criados no canal)'}
           </p>
         </div>
         <div className="card-glass p-4 rounded-xl text-center">
-          <p className="text-sm text-muted-foreground">Leads Qualificados</p>
+          <p className="text-sm text-muted-foreground">Leads Qualificados por SDR</p>
           <p className="text-4xl font-bold text-foreground">{formatNumber(qualificados)}</p>
-          <p className="text-xs text-muted-foreground mt-1">Leads que passaram da qualificação</p>
+          <p className="text-xs text-muted-foreground mt-1">Qualificados com SDR identificado no custom field</p>
         </div>
       </div>
 
@@ -209,7 +232,7 @@ export function Bloco5Qualificacao({ movimentos, sdrs }: Props) {
         <div className="flex items-start justify-between mb-4 gap-4">
           <h3 className="text-base font-semibold text-foreground">Taxa de Qualificação por SDR</h3>
           <p className="text-[11px] text-muted-foreground italic text-right max-w-md">
-            qualificados_do_sdr / leads_recebidos_no_canal. Automações/IA (moved_by ≠ identificado) não são atribuídas a nenhum SDR.
+            qualificados_do_sdr / leads_recebidos_no_canal. Atribuição usa o custom field <code>SDR</code> do lead (não <code>moved_by</code>).
           </p>
         </div>
         {taxaPorSdr.length === 0 ? (
