@@ -2,11 +2,12 @@ import { useState, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   TrendingUp, Megaphone, DollarSign, GraduationCap, Cpu,
-  ChevronDown, ChevronRight, LogOut, ShieldCheck,
+  ChevronDown, ChevronRight, LogOut, ShieldCheck, Star,
 } from 'lucide-react';
 import logoUrania from '@/assets/logo-urania.png';
 import { useAuth } from '@/hooks/useAuth';
 import { useRouteAccess } from '@/hooks/useRouteAccess';
+import { useUserPreferences } from '@/hooks/useUserPreferences';
 
 interface GlobalSidebarProps {
   onLogout: () => void;
@@ -79,6 +80,7 @@ export function GlobalSidebar({ onLogout }: GlobalSidebarProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, isGlobalAdmin } = useAuth();
+  const { isFavorite, toggleFavorite } = useUserPreferences(user?.id);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({
     comercial: true,
     'qualidade-grp': true,
@@ -92,19 +94,33 @@ export function GlobalSidebar({ onLogout }: GlobalSidebarProps) {
     const hasChildren = !!item.children?.length;
     const isExp = expanded[item.id];
     const active = isActive(item.path);
+    const fav = !hasChildren && isFavorite(item.path);
 
     const button = (
-      <button
-        onClick={() => (hasChildren ? toggleExpand(item.id) : navigate(item.path))}
-        className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition-colors ${
+      <div
+        className={`group w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition-colors cursor-pointer ${
           active && !hasChildren
             ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium'
             : 'text-sidebar-foreground/60 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground'
         }`}
+        onClick={() => (hasChildren ? toggleExpand(item.id) : navigate(item.path))}
       >
         <span className="flex-1 text-left">{item.label}</span>
+        {!hasChildren && (
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); toggleFavorite(item.path); }}
+            className={`p-0.5 rounded transition-opacity ${
+              fav ? 'text-primary' : 'text-sidebar-foreground/30 opacity-0 group-hover:opacity-100 hover:text-sidebar-foreground/70'
+            }`}
+            title={fav ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
+            aria-label={fav ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
+          >
+            <Star size={12} className={fav ? 'fill-primary' : ''} />
+          </button>
+        )}
         {hasChildren && (isExp ? <ChevronDown size={12} /> : <ChevronRight size={12} />)}
-      </button>
+      </div>
     );
 
     const inner = (
@@ -131,10 +147,14 @@ export function GlobalSidebar({ onLogout }: GlobalSidebarProps) {
 
   return (
     <aside className="fixed left-0 top-0 h-screen w-56 bg-sidebar border-r border-sidebar-border flex flex-col z-50">
-      <div className="p-5 border-b border-sidebar-border">
-        <img src={logoUrania} alt="Urânia" className="h-10" />
-        <p className="text-xs text-sidebar-foreground/60 mt-1">Analytics</p>
-      </div>
+      <button
+        onClick={() => navigate('/')}
+        className="p-5 border-b border-sidebar-border hover:bg-sidebar-accent/40 transition-colors flex items-center justify-center"
+        aria-label="Ir para a tela inicial"
+        title="Tela inicial"
+      >
+        <img src={logoUrania} alt="Urânia" className="h-20" />
+      </button>
 
       <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto scrollbar-thin">
         <p className="text-[10px] font-semibold text-sidebar-foreground/40 uppercase tracking-wider px-3 mb-2">Áreas</p>
@@ -143,11 +163,12 @@ export function GlobalSidebar({ onLogout }: GlobalSidebarProps) {
           const hasChildren = !!area.children?.length;
           const isExp = expanded[area.id];
           const active = isActive(area.path);
+          const fav = !hasChildren && isFavorite(area.path);
 
           const areaButton = (
-            <button
+            <div
               onClick={() => (hasChildren ? toggleExpand(area.id) : navigate(area.path))}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
+              className={`group w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors cursor-pointer ${
                 active && !hasChildren
                   ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium'
                   : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground'
@@ -155,8 +176,20 @@ export function GlobalSidebar({ onLogout }: GlobalSidebarProps) {
             >
               <Icon size={18} />
               <span className="flex-1 text-left">{area.label}</span>
+              {!hasChildren && (
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); toggleFavorite(area.path); }}
+                  className={`p-0.5 rounded transition-opacity ${
+                    fav ? 'text-primary' : 'text-sidebar-foreground/30 opacity-0 group-hover:opacity-100 hover:text-sidebar-foreground/70'
+                  }`}
+                  title={fav ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
+                >
+                  <Star size={12} className={fav ? 'fill-primary' : ''} />
+                </button>
+              )}
               {hasChildren && (isExp ? <ChevronDown size={14} /> : <ChevronRight size={14} />)}
-            </button>
+            </div>
           );
 
           const inner = (
