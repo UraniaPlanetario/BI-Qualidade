@@ -20,6 +20,7 @@ Um arquivo por dashboard — estrutura de arquivos, hooks, componentes, e cada v
 - **[dashboards/desempenho-sdr.md](dashboards/desempenho-sdr.md)** — MPA, comissão, 5 blocos (tempo, msg, campos, qualificação)
 - **[dashboards/desempenho-vendedor.md](dashboards/desempenho-vendedor.md)** — Tempo de resposta, campos, fechamentos, diárias, faturamento, cancelamentos
 - **[dashboards/monitoramento-usuarios.md](dashboards/monitoramento-usuarios.md)** — Atividades no CRM + Consistência CRM + Ranking por Percentil
+- **[dashboards/calendario-astronomos.md](dashboards/calendario-astronomos.md)** — Onboarding: agenda de visitas, mapa, e auditoria de divergências (3 abas)
 
 ## Como navegar
 

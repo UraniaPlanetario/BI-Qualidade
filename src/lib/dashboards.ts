@@ -22,6 +22,7 @@ export const DASHBOARDS: DashboardEntry[] = [
   { path: '/financeiro',                   label: 'Faturamento',                 icon: DollarSign, area: 'Financeiro' },
   { path: '/marketing',                    label: 'Marketing',                   icon: Megaphone,  area: 'Marketing' },
   { path: '/onboarding',                   label: 'Onboarding',                  icon: GraduationCap, area: 'Onboarding' },
+  { path: '/onboarding/calendario-astronomos', label: 'Calendário Astrônomos',  icon: Calendar,   area: 'Onboarding', description: 'Visitas, mapa de distribuição e auditoria de agendamentos' },
   { path: '/tecnologia',                   label: 'Tecnologia',                  icon: Cpu,        area: 'Tecnologia' },
 ];
 

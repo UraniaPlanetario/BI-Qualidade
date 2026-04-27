@@ -685,6 +685,32 @@ LIMIT p_limit;
 
 **Consumida por:** `useTopCamposAlterados` em [`monitoramento/hooks/useConsistenciaData.ts`](../src/areas/comercial/monitoramento/hooks/useConsistenciaData.ts) — usada na sub-aba "Campo alterado" do Monitoramento.
 
+### `gold.agendamentos_astronomos`
+
+Uma linha por tarefa do funil "Astrônomos" (`bronze.kommo_tasks` + `bronze.kommo_task_types` + custom fields do `bronze.kommo_leads_raw`). Consumida pelo dashboard [Calendário Astrônomos](dashboards/calendario-astronomos.md).
+
+**Colunas chave:**
+- `task_id` (PK), `lead_id`, `nome_tarefa`, `data_criacao`, `data_conclusao` (=`complete_till`), `is_completed`
+- `status_tarefa` derivado: `'completa'` se `is_completed`, `'atrasada'` se `complete_till < now()`, senão `'aberta'`
+- `task_type_id`, `tipo_tarefa` (PRÉ/VISITA/RESERVA/Ñ MARCAR), `desc_tarefa`, `astronomo` — vindos de `bronze.kommo_task_types` (seed manual)
+- Custom fields do lead extraídos por `field_id`: `nome_escola` (560349), `valor_venda` (587088), `produtos` (610061), `numero_alunos` (553257), `data_agendamento` (586018), `local_instalacao` (567787), `turno` (852829), `conteudo_apresentacao` (610063), `responsavel_evento` (567785), `numero_diarias` (581411), `cupula` (586020), `segmento` (619041), `cidade_estado` (619039 → split em `cidade` + `uf`), `endereco` (553261), `coordenada` (618851 → parsed em `latitude` + `longitude`), `telefone_responsavel`, `nota_nps`/`nps`, `avaliacao_geral`, `avaliacao_astronomo`, `brinde`
+
+**Refresh:** `gold.refresh_agendamentos_astronomos()` — TRUNCATE + INSERT SELECT. Não está no cron diário (mudanças são raras; rodar manual após sync de tasks).
+
+**Mapping `task_type_id` → astronomo:** vive em `bronze.kommo_task_types` (76 entradas seed manual via [migration 026](../../supabase/migrations/026_seed_kommo_task_types_astronomos.sql)). Quando astrônomo entra/sai, ajustar a tabela à mão e re-rodar o refresh. A edge function `sync-kommo-task-types` foi deployada mas não é usada (a API `/api/v4/account?with=task_types` ignora o parâmetro `with`).
+
+### `gold.leads_onboarding_sem_visita` (view)
+
+Auditoria operacional consumida pela aba "Auditoria" do dashboard [Calendário Astrônomos](dashboards/calendario-astronomos.md). Lista leads ativos nos funis "Onboarding Escolas" / "Onboarding SME" que NÃO têm tarefa de VISITA aberta (`status_tarefa <> 'completa'`). Cenário ideal: toda passagem pra onboarding cria uma VISITA pro astrônomo.
+
+Colunas extras pra triagem:
+- `lead_vazio` — `true` se sem `Nome da escola` e sem `Astrônomo` no card (provavelmente lead-teste ou movimentação errada)
+- `tem_agendamento_futuro` — `true` se o custom field `Data e Hora do Agendamento` aponta pro futuro
+- `ja_teve_visita_completa` — `true` se o lead já teve uma tarefa VISITA concluída (em fechamento administrativo)
+- `tarefas_no_lead` — string concatenada listando todas as tarefas do lead com status, pra ajudar a entender o caso
+
+A view é leve (filtra direto em `bronze.kommo_leads_raw` e `gold.agendamentos_astronomos`); não precisa refresh.
+
 ### Funções `gold.refresh_*()`
 
 Todas são `SECURITY DEFINER` com `statement_timeout` alto (300–900s). Seguem o padrão: TRUNCATE → INSERT SELECT → retorna `N rows inserted`.
@@ -697,6 +723,7 @@ Lista:
 - `refresh_tempo_resposta()` — `tempo_resposta_mensagens` (depende de `cubo_historico_mensagens`)
 - `refresh_alteracao_campos()` — `cubo_alteracao_campos_eventos`
 - `refresh_user_activities()` — `user_activities_daily`
+- `refresh_agendamentos_astronomos()` — `agendamentos_astronomos` (manual; não está no cron)
 
 Disparadas pela edge function `refresh-gold-tables` (cron 08:00 UTC), provavelmente na ordem `historico_mensagens → tempo_resposta` (segunda depende da primeira).
 
@@ -740,6 +767,8 @@ Todas em `supabase/functions/*/index.ts`. Rodam Deno, autenticadas com `KOMMO_AC
 | `gold.user_activities_daily` | PK, unique `(user_id, activity_date, activity_hour, event_type, entity_type)`, `user_id`, `activity_date DESC`, `category` |
 | `gold.leads_closed` | PK, `lead_id`, `vendedor`, `cancelado`, `entrada_onboarding_at DESC` |
 | `gold.leads_quality` | PK, `kommo_lead_id` unique, `pipeline_name`, `responsible_user`, `vendedor_consultor`, `score_qualidade`, `cidade_estado` |
+| `gold.agendamentos_astronomos` | PK `task_id`, `lead_id`, `astronomo`, `tipo_tarefa`, `data_conclusao`, `(latitude, longitude)`, `cidade` |
+| `bronze.kommo_task_types` | PK `id`, `astronomo`, `tipo_tarefa` |
 
 ## RLS e permissões
 

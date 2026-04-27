@@ -1,0 +1,110 @@
+/* Customizações do react-big-calendar pra integrar ao tema escuro do app. */
+
+/* Toolbar (botões Hoje, Mês/Semana/Dia/Agenda, navegação) */
+.calendario-agendamentos .rbc-toolbar button {
+  color: #ffffff;
+  font-weight: 500;
+  background-color: transparent;
+  border-color: hsl(var(--border));
+}
+
+.calendario-agendamentos .rbc-toolbar button:hover,
+.calendario-agendamentos .rbc-toolbar button:focus {
+  background-color: hsl(var(--accent) / 0.4);
+  color: #ffffff;
+}
+
+.calendario-agendamentos .rbc-toolbar button.rbc-active,
+.calendario-agendamentos .rbc-toolbar button.rbc-active:hover,
+.calendario-agendamentos .rbc-toolbar button.rbc-active:focus {
+  background-color: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  border-color: hsl(var(--primary));
+}
+
+/* Botão "+N mais" — branco no fundo escuro padrão.
+   `mix-blend-mode: difference` inverte automaticamente quando passa por cima
+   do fundo claro do dia atual, virando preto sem precisar de regra específica. */
+.calendario-agendamentos .rbc-show-more {
+  color: #ffffff !important;
+  font-weight: 500;
+  background-color: transparent;
+  mix-blend-mode: difference;
+}
+
+.calendario-agendamentos .rbc-show-more:hover {
+  text-decoration: underline;
+}
+
+/* Número do dia atual: o react-big-calendar pinta o bg do `.rbc-today` num
+   tom claro pra destacar. O número (default branco do tema) fica ilegível —
+   força preto quando é hoje. */
+.calendario-agendamentos .rbc-date-cell.rbc-now .rbc-button-link,
+.calendario-agendamentos .rbc-date-cell.rbc-now > a,
+.calendario-agendamentos .rbc-date-cell.rbc-now > button {
+  color: #000 !important;
+  font-weight: 600;
+}
+
+/* Header dos dias da semana ("Domingo", "Segunda-feira"…) */
+.calendario-agendamentos .rbc-header {
+  color: hsl(var(--muted-foreground));
+  font-weight: 600;
+  padding: 8px 4px;
+}
+
+/* Dias fora do mês corrente (final do mês anterior, começo do próximo).
+   Por padrão o react-big-calendar deixa branco/claro demais e atrapalha o
+   contraste com os dias do mês atual — escurece o fundo pra "preto mais claro"
+   e suaviza o número. */
+.calendario-agendamentos .rbc-off-range-bg {
+  background-color: rgba(255, 255, 255, 0.025);
+}
+
+.calendario-agendamentos .rbc-off-range {
+  color: hsl(var(--muted-foreground) / 0.45);
+}
+
+/* Visualizações Dia/Semana: como tratamos todos os agendamentos como "all-day"
+   (a hora exata não importa pra operação), escondemos a grade horária pra ficar
+   só a lista de eventos. Mantém o header e a faixa all-day. */
+.calendario-agendamentos .rbc-time-view .rbc-time-content {
+  display: none;
+}
+
+.calendario-agendamentos .rbc-time-view .rbc-allday-cell {
+  height: auto;
+  max-height: none;
+}
+
+/* Garante que a faixa all-day se expanda completamente sem scroll forçado */
+.calendario-agendamentos .rbc-time-view {
+  border-bottom: 1px solid hsl(var(--border));
+}
+
+/* Visualização Agenda: a coluna "Data" (esquerda) estava herdando a cor dos
+   eventos. Reseta pra cor padrão do card com texto neutro. */
+.calendario-agendamentos .rbc-agenda-view .rbc-agenda-date-cell {
+  background-color: hsl(var(--card)) !important;
+  color: hsl(var(--foreground)) !important;
+  font-weight: 500;
+  vertical-align: top;
+  padding: 8px 12px;
+  border-right: 1px solid hsl(var(--border));
+}
+
+/* Cabeçalho da tabela Agenda */
+.calendario-agendamentos .rbc-agenda-view table.rbc-agenda-table thead > tr > th {
+  background-color: hsl(var(--card));
+  color: hsl(var(--foreground));
+  border-bottom: 1px solid hsl(var(--border));
+  padding: 8px 12px;
+  text-align: left;
+}
+
+/* Esconde a coluna "Hora" da Agenda — como tratamos tudo como all-day,
+   ela só repetiria "all day" em toda linha. */
+.calendario-agendamentos .rbc-agenda-view .rbc-agenda-time-cell,
+.calendario-agendamentos .rbc-agenda-view table.rbc-agenda-table thead > tr > th:nth-child(2) {
+  display: none;
+}

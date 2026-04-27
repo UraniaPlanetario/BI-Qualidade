@@ -2,7 +2,7 @@
 
 ## Visão geral
 
-Plataforma de Business Intelligence que integra a API do Kommo CRM com uma arquitetura medallion em Supabase, expondo **7 dashboards** em React para gestão comercial, financeira e de qualidade da Urânia Planetário.
+Plataforma de Business Intelligence que integra a API do Kommo CRM com uma arquitetura medallion em Supabase, expondo **8 dashboards** em React para gestão comercial, financeira, de onboarding e de qualidade da Urânia Planetário.
 
 > **📚 Documentação completa em [`docs/`](docs/README.md)** — data model, business rules e um doc por dashboard (schema, hooks, SQL, fórmulas).
 
@@ -49,6 +49,7 @@ Sync diário orquestrado por `pg_cron` disparando edge functions via `pg_net`. V
 | `/comercial/desempenho-sdr` | Desempenho SDR (MPA + Comissão) | ✅ produção | [desempenho-sdr.md](docs/dashboards/desempenho-sdr.md) |
 | `/comercial/desempenho-vendedor` | Desempenho Vendedor | ✅ produção | [desempenho-vendedor.md](docs/dashboards/desempenho-vendedor.md) |
 | `/comercial/monitoramento` | Monitoramento de Usuários | ✅ produção | [monitoramento-usuarios.md](docs/dashboards/monitoramento-usuarios.md) |
+| `/onboarding/calendario-astronomos` | Calendário Astrônomos | ✅ produção | [calendario-astronomos.md](docs/dashboards/calendario-astronomos.md) |
 
 Abas específicas de destaque dentro do Monitoramento: **Consistência CRM** (score ações/lead com classificação fixa) e **Ranking por Percentil** (P25/P50/P75 do time).
 
@@ -117,7 +118,9 @@ Antes de commitar mudança em código que afete métricas/regras, verifique se o
 │   │   │   ├── desempenho-sdr/
 │   │   │   ├── desempenho-vendedor/
 │   │   │   └── monitoramento/
-│   │   └── financeiro/
+│   │   ├── financeiro/
+│   │   └── onboarding/
+│   │       └── calendario-astronomos/
 │   ├── components/
 │   │   ├── ui/                  # shadcn/ui (gerado — não editar)
 │   │   └── layout/              # GlobalSidebar, AppShell, ProtectedRoute

@@ -59,7 +59,15 @@ const AREAS: AreaConfig[] = [
   },
   { id: 'marketing', label: 'Marketing', icon: Megaphone, path: '/marketing' },
   { id: 'financeiro', label: 'Financeiro', icon: DollarSign, path: '/financeiro' },
-  { id: 'onboarding', label: 'Onboarding', icon: GraduationCap, path: '/onboarding' },
+  {
+    id: 'onboarding',
+    label: 'Onboarding',
+    icon: GraduationCap,
+    path: '/onboarding',
+    children: [
+      { id: 'calendario-astronomos', label: 'Calendário Astrônomos', path: '/onboarding/calendario-astronomos' },
+    ],
+  },
   { id: 'tecnologia', label: 'Tecnologia', icon: Cpu, path: '/tecnologia' },
 ];
 

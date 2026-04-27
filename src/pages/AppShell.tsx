@@ -9,6 +9,7 @@ import Campanhas from '@/areas/comercial/campanhas/index';
 import DesempenhoVendedor from '@/areas/comercial/desempenho-vendedor/index';
 import DesempenhoSDR from '@/areas/comercial/desempenho-sdr/index';
 import Faturamento from '@/areas/financeiro/index';
+import CalendarioAstronomos from '@/areas/onboarding/calendario-astronomos/index';
 import AreaPlaceholder from '@/areas/placeholder';
 import Home from '@/pages/Home';
 import AdminUsers from '@/pages/admin/Users';
@@ -34,6 +35,7 @@ const protectedRoutes = [
   { path: '/marketing', element: <AreaPlaceholder title="Marketing" /> },
   { path: '/financeiro', element: <Faturamento /> },
   { path: '/onboarding', element: <AreaPlaceholder title="Onboarding" /> },
+  { path: '/onboarding/calendario-astronomos', element: <CalendarioAstronomos /> },
   { path: '/tecnologia', element: <AreaPlaceholder title="Tecnologia" /> },
   { path: '/admin/usuarios', element: <AdminUsers /> },
   { path: '/admin/departamentos', element: <AdminDepartments /> },

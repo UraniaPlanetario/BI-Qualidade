@@ -69,10 +69,12 @@ Deno.serve(async (req) => {
     const maxPage = startPage + maxPages - 1;
 
     while (page <= maxPage) {
+      // Nota: o Kommo IGNORA `order[updated_at]=desc` em /api/v4/tasks e sempre
+      // retorna em ordem asc (mais antigas primeiro). Por isso não passamos `order`.
+      // Para sincronizar atualizações recentes, sempre passe ?days=N (recomendado 7-30).
       const params: Record<string, string> = {
         limit: "250",
         page: String(page),
-        "order[updated_at]": "desc",
       };
       if (fromTs !== null) params["filter[updated_at][from]"] = String(fromTs);
       if (onlyOpen) params["filter[is_completed]"] = "0";

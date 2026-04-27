@@ -1,0 +1,38 @@
+/* Customizações do popup do Leaflet pra integrar ao tema escuro do app
+   e garantir que apareça acima de outros elementos (z-index alto). */
+
+.leaflet-container .agendamento-popup .leaflet-popup-content-wrapper {
+  background-color: hsl(var(--card));
+  color: hsl(var(--foreground));
+  border: 1px solid hsl(var(--border));
+  border-radius: 8px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+  padding: 4px;
+}
+
+.leaflet-container .agendamento-popup .leaflet-popup-content {
+  margin: 8px 12px;
+  color: hsl(var(--foreground));
+  font-family: inherit;
+}
+
+.leaflet-container .agendamento-popup .leaflet-popup-tip {
+  background-color: hsl(var(--card));
+  border-left: 1px solid hsl(var(--border));
+  border-bottom: 1px solid hsl(var(--border));
+}
+
+.leaflet-container .agendamento-popup a.leaflet-popup-close-button {
+  color: hsl(var(--muted-foreground));
+  padding: 4px 8px;
+}
+.leaflet-container .agendamento-popup a.leaflet-popup-close-button:hover {
+  color: hsl(var(--foreground));
+}
+
+/* Força o popup a ficar acima de qualquer overlay decorativo no container.
+   O Leaflet já põe o popup-pane em z-index 700, mas custom containers podem
+   criar contextos de empilhamento que cortam visualmente o popup. */
+.leaflet-container .leaflet-popup-pane {
+  z-index: 800;
+}
