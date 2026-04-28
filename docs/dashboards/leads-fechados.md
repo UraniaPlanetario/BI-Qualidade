@@ -30,14 +30,16 @@ Análise dos fechamentos sob duas perspectivas independentes, lendo de [`gold.le
 
 Hierarquia de classificação — o **primeiro** critério atendido vence:
 
-| Caminho | Critério | Tempo medido |
+| Caminho | Critério (classificação) | Tempo medido (`tempo_dias_caminho`) |
 |---|---|---|
-| **Recorrente** | Lead passou pelo pipeline `Clientes - CS` antes deste fechamento | `fechamento − última entrada em Clientes-CS` |
-| **Reativada** | Passou pelo status `Oportunidade Reativada` ou `Reativação CRM` | `fechamento − última entrada na etapa de reativação` |
-| **Resgate** | Passou pelo pipeline `Resgate/Nutrição Whats` | `fechamento − última entrada no resgate` |
+| **Recorrente** | Lead passou pelo pipeline `Clientes - CS` antes deste fechamento | `fechamento − última entrada em Clientes-CS` (ou seja: fim do atendimento anterior → novo fechamento) |
+| **Reativada** | Passou pelo status `Oportunidade Reativada` ou `Reativação CRM` | `fechamento − created_at` |
+| **Resgate** | Passou pelo pipeline `Resgate/Nutrição Whats` | `fechamento − created_at` |
 | **Direto** | Nenhum dos acima | `fechamento − created_at` |
 
-A janela do tempo respeita a ocorrência: se um lead fechou em 03/2025 via Resgate e em 09/2025 como Recorrente, cada linha em `leads_closed` recebe seu próprio caminho/tempo.
+A janela do tempo respeita a ocorrência: se um lead fechou em 03/2025 via Direto e em 09/2025 como Recorrente, cada linha em `leads_closed` recebe seu próprio caminho/tempo.
+
+O **KPI geral "Tempo Médio"** (no topo da aba) usa `tempo_dias_total` — sempre `fechamento − created_at`, comparável entre todos os caminhos.
 
 ### Canal de entrada
 

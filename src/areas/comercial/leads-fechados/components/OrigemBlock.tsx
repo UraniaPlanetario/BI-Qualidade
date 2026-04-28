@@ -62,20 +62,23 @@ export function OrigemBlock({ filters }: Props) {
   }, [leadsRaw, filters]);
 
   const stats = useMemo(() => {
-    const ativos = leads.filter((l) => !l.cancelado);
+    const ativos = leads;
     const total = ativos.length;
     const receita = ativos.reduce((s, l) => s + (l.lead_price || 0), 0);
     const totalDiarias = ativos.reduce((s, l) => s + diariasOf(l), 0);
     const ticketMedio = totalDiarias > 0 ? receita / totalDiarias : 0;
-    const temposValidos = ativos.filter((l) => l.tempo_dias_caminho != null);
+    // KPI geral usa o tempo bruto: criação → fechamento (mesmo cálculo pra todos
+    // os caminhos, comparável). Os cards por caminho usam o tempo "canônico"
+    // (tempo_dias_caminho), que difere apenas pra Recorrente.
+    const temposValidos = ativos.filter((l) => l.tempo_dias_total != null);
     const tempoMedio = temposValidos.length > 0
-      ? temposValidos.reduce((s, l) => s + (l.tempo_dias_caminho ?? 0), 0) / temposValidos.length
+      ? temposValidos.reduce((s, l) => s + (l.tempo_dias_total ?? 0), 0) / temposValidos.length
       : 0;
     return { total, totalDiarias, receita, ticketMedio, tempoMedio };
   }, [leads]);
 
   const porCaminho = useMemo(() => {
-    const ativos = leads.filter((l) => !l.cancelado);
+    const ativos = leads;
     return CAMINHOS_ORDER.map((caminho) => {
       const items = ativos.filter((l) => l.caminho_origem === caminho);
       const qtd = items.length;
@@ -91,7 +94,7 @@ export function OrigemBlock({ filters }: Props) {
   }, [leads]);
 
   const porCanal = useMemo(() => {
-    const ativos = leads.filter((l) => !l.cancelado);
+    const ativos = leads;
     const map = new Map<string, { canal: string; qtd: number; receita: number; diarias: number }>();
     for (const l of ativos) {
       const canal = normalizeCanal(l.canal_entrada);
@@ -135,8 +138,9 @@ export function OrigemBlock({ filters }: Props) {
           <p className="text-3xl font-bold text-foreground">{formatCurrency(stats.ticketMedio)}</p>
         </div>
         <div className="card-glass p-4 rounded-xl text-center">
-          <p className="text-sm text-muted-foreground">Tempo Médio (caminho)</p>
+          <p className="text-sm text-muted-foreground">Tempo Médio</p>
           <p className="text-3xl font-bold text-foreground">{stats.tempoMedio.toFixed(1)} <span className="text-lg font-normal text-muted-foreground">dias</span></p>
+          <p className="text-[10px] text-muted-foreground/70 mt-1">Da criação do lead ao fechamento</p>
         </div>
       </div>
 

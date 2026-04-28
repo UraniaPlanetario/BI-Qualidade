@@ -51,10 +51,10 @@ export const CAMINHO_COLORS: Record<CaminhoOrigem, string> = {
 };
 
 export const CAMINHO_DESCRIPTIONS: Record<CaminhoOrigem, string> = {
-  Direto:     'Lead chegou e fechou sem desvios — fluxo padrão.',
-  Recorrente: 'Cliente que já era da base (passou por Clientes - CS) e fechou novamente. Tempo medido desde a última entrada em Clientes - CS.',
-  Reativada:  'Lead que passou pela etapa "Oportunidade Reativada" / "Reativação CRM" no caminho até fechar.',
-  Resgate:    'Lead que passou pelo pipeline "Resgate/Nutrição Whats" antes de fechar.',
+  Direto:     'Lead chegou e fechou sem desvios — fluxo padrão. Tempo medido da criação ao fechamento.',
+  Recorrente: 'Cliente que já era da base (passou por Clientes - CS) e fechou novamente. Tempo medido desde a saída do onboarding anterior (entrada em Clientes - CS) até o novo fechamento.',
+  Reativada:  'Lead que passou pela etapa "Oportunidade Reativada" / "Reativação CRM" no caminho até fechar. Tempo medido da criação ao fechamento.',
+  Resgate:    'Lead que passou pelo pipeline "Resgate/Nutrição Whats" antes de fechar. Tempo medido da criação ao fechamento.',
 };
 
 /** Normaliza o canal de entrada (alguns leads salvam JSON array como string). */

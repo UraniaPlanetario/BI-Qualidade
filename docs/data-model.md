@@ -700,9 +700,9 @@ Hierarquia (1 caminho por ocorrência de fechamento — `gold.leads_closed.occur
 
 Colunas adicionadas:
 - `caminho_origem` (text) — uma das 4 categorias acima
-- `entrada_caminho_at` (timestamptz) — marco temporal usado pra calcular o tempo
-- `tempo_dias_caminho` (numeric, 1 casa) — janela do caminho (Recorrente: desde última entrada em Clientes-CS; Reativada: desde reativação; Resgate: desde entrada no resgate; Direto: desde criação)
-- `tempo_dias_total` (numeric) — tempo desde criação (sempre, pra comparação)
+- `entrada_caminho_at` (timestamptz) — marco temporal usado pra calcular `tempo_dias_caminho`
+- `tempo_dias_caminho` (numeric, 1 casa) — Recorrente: `fechamento − última entrada em Clientes-CS`; demais (Direto/Reativada/Resgate): `fechamento − lead_created_at`
+- `tempo_dias_total` (numeric) — sempre `fechamento − lead_created_at`. Usado pelo KPI geral "Tempo Médio" pra ter um número comparável entre todos os caminhos
 
 A view é leve: agrega `gold.leads_movements` filtrado por `moved_at < fechamento_ts` por lead — joins materializam em ~1s pra ~500 fechamentos. Sem refresh necessário.
 
