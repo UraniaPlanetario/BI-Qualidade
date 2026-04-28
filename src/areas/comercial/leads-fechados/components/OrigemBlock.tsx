@@ -3,11 +3,11 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   Cell, LabelList, CartesianGrid,
 } from 'recharts';
-import { Loader2, Info } from 'lucide-react';
+import { Loader2, Info, ExternalLink } from 'lucide-react';
 import { useLeadsOrigem } from '../hooks/useClosedLeads';
 import {
   LeadClosedOrigem, CaminhoOrigem, CAMINHO_COLORS, CAMINHO_DESCRIPTIONS,
-  ClosedFilters, normalizeCanal,
+  ClosedFilters, normalizeCanal, formatDateBR,
 } from '../types';
 
 interface Props {
@@ -292,8 +292,113 @@ export function OrigemBlock({ filters }: Props) {
             Quantos fechamentos por canal de entrada × caminho no CRM.
           </p>
         </div>
-        <CrossTable leads={leads.filter((l) => !l.cancelado)} />
+        <CrossTable leads={leads} />
       </section>
+
+      {/* Lista detalhada — pra revisão manual */}
+      <section>
+        <div className="mb-4">
+          <h2 className="text-xl font-semibold text-foreground">Lista de leads fechados</h2>
+          <p className="text-xs text-muted-foreground mt-1">
+            Conforme filtros aplicados — clique pra abrir o lead no Kommo. Útil pra validar manualmente a classificação por caminho.
+          </p>
+        </div>
+        <LeadsTable leads={leads} />
+      </section>
+    </div>
+  );
+}
+
+function LeadsTable({ leads }: { leads: LeadClosedOrigem[] }) {
+  const sorted = useMemo(
+    () => [...leads].sort((a, b) =>
+      (b.data_fechamento_fmt ?? '').localeCompare(a.data_fechamento_fmt ?? '')
+    ),
+    [leads],
+  );
+
+  if (sorted.length === 0) {
+    return (
+      <div className="card-glass p-8 rounded-xl text-center text-sm text-muted-foreground">
+        Sem leads no período.
+      </div>
+    );
+  }
+
+  return (
+    <div className="card-glass rounded-xl overflow-hidden">
+      <div className="overflow-x-auto max-h-[600px]">
+        <table className="w-full text-sm">
+          <thead className="sticky top-0 bg-card border-b z-10">
+            <tr>
+              <th className="text-left py-2 px-3 text-xs font-semibold text-muted-foreground">Fechamento</th>
+              <th className="text-left py-2 px-3 text-xs font-semibold text-muted-foreground">Lead</th>
+              <th className="text-left py-2 px-3 text-xs font-semibold text-muted-foreground">Cidade</th>
+              <th className="text-left py-2 px-3 text-xs font-semibold text-muted-foreground">Vendedor</th>
+              <th className="text-left py-2 px-3 text-xs font-semibold text-muted-foreground">Canal</th>
+              <th className="text-left py-2 px-3 text-xs font-semibold text-muted-foreground">Caminho</th>
+              <th className="text-right py-2 px-3 text-xs font-semibold text-muted-foreground">Tempo</th>
+              <th className="text-right py-2 px-3 text-xs font-semibold text-muted-foreground">Diárias</th>
+              <th className="text-right py-2 px-3 text-xs font-semibold text-muted-foreground">Valor</th>
+              <th className="py-2 px-3 text-xs font-semibold text-muted-foreground"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {sorted.map((l) => (
+              <tr
+                key={l.id}
+                className={`border-b border-border/40 hover:bg-accent/40 ${l.cancelado ? 'opacity-50' : ''}`}
+              >
+                <td className="py-1.5 px-3 tabular-nums">{formatDateBR(l.data_fechamento_fmt)}</td>
+                <td className="py-1.5 px-3 truncate max-w-[260px]" title={l.lead_name ?? ''}>
+                  {l.lead_name ?? '—'}
+                  {l.cancelado && <span className="ml-1 text-[10px] text-rose-500">(cancelado)</span>}
+                </td>
+                <td className="py-1.5 px-3 truncate max-w-[140px] text-muted-foreground">
+                  {l.cidade_estado ?? '—'}
+                </td>
+                <td className="py-1.5 px-3 truncate max-w-[140px] text-muted-foreground">
+                  {l.vendedor ?? '—'}
+                </td>
+                <td className="py-1.5 px-3 truncate max-w-[160px] text-muted-foreground">
+                  {normalizeCanal(l.canal_entrada)}
+                </td>
+                <td className="py-1.5 px-3">
+                  <span
+                    className="text-xs px-1.5 py-0.5 rounded-full border font-medium"
+                    style={{
+                      color: CAMINHO_COLORS[l.caminho_origem],
+                      borderColor: CAMINHO_COLORS[l.caminho_origem] + '60',
+                      backgroundColor: CAMINHO_COLORS[l.caminho_origem] + '15',
+                    }}
+                  >
+                    {l.caminho_origem}
+                  </span>
+                </td>
+                <td className="py-1.5 px-3 text-right tabular-nums text-muted-foreground">
+                  {l.tempo_dias_caminho != null ? `${l.tempo_dias_caminho.toFixed(1)}d` : '—'}
+                </td>
+                <td className="py-1.5 px-3 text-right tabular-nums">{l.n_diarias ?? '—'}</td>
+                <td className="py-1.5 px-3 text-right tabular-nums">{formatCurrency(l.lead_price ?? 0)}</td>
+                <td className="py-1.5 px-3">
+                  <a
+                    href={`https://uraniaplanetario.kommo.com/leads/detail/${l.lead_id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary hover:underline inline-flex items-center gap-1"
+                    title="Abrir no Kommo"
+                  >
+                    <ExternalLink size={12} />
+                  </a>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div className="px-3 py-2 border-t bg-card/60 text-xs text-muted-foreground">
+        {sorted.length.toLocaleString('pt-BR')} leads
+      </div>
     </div>
   );
 }

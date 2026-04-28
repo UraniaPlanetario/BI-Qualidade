@@ -701,8 +701,10 @@ Hierarquia (1 caminho por ocorrência de fechamento — `gold.leads_closed.occur
 Colunas adicionadas:
 - `caminho_origem` (text) — uma das 4 categorias acima
 - `entrada_caminho_at` (timestamptz) — marco temporal usado pra calcular `tempo_dias_caminho`
-- `tempo_dias_caminho` (numeric, 1 casa) — Recorrente: `fechamento − última entrada em Clientes-CS`; demais (Direto/Reativada/Resgate): `fechamento − lead_created_at`
-- `tempo_dias_total` (numeric) — sempre `fechamento − lead_created_at`. Usado pelo KPI geral "Tempo Médio" pra ter um número comparável entre todos os caminhos
+- `tempo_dias_caminho` (numeric, 1 casa). Para Recorrentes: `entrada_onboarding_at − última 'Venda Ganha' em Onboarding anterior` (com fallback pra entrada original em Clientes-CS); pode ser `NULL` quando o histórico de movements não cobre o atendimento anterior (lead pre-bronze). Para os demais: `entrada_onboarding_at − lead_created_at`
+- `tempo_dias_total` (numeric) — sempre `entrada_onboarding_at − lead_created_at`. Usado pelo KPI geral "Tempo Médio" pra ter um número comparável entre todos os caminhos
+
+A view evoluiu em 4 versões (035 → 036 → 037 → 038): a v4 corrige bugs onde `MAX(moved_at) WHERE pipeline_to='Clientes - CS'` capturava mudanças internas de status do CS (Negociação → Pré Reserva → Venda Ganha) que aconteciam horas antes do reentry, fazendo o tempo médio do Recorrente cair pra ~1 dia (real: ~22 dias).
 
 A view é leve: agrega `gold.leads_movements` filtrado por `moved_at < fechamento_ts` por lead — joins materializam em ~1s pra ~500 fechamentos. Sem refresh necessário.
 

@@ -32,10 +32,10 @@ Hierarquia de classificação — o **primeiro** critério atendido vence:
 
 | Caminho | Critério (classificação) | Tempo medido (`tempo_dias_caminho`) |
 |---|---|---|
-| **Recorrente** | Lead passou pelo pipeline `Clientes - CS` antes deste fechamento | `fechamento − última entrada em Clientes-CS` (ou seja: fim do atendimento anterior → novo fechamento) |
-| **Reativada** | Passou pelo status `Oportunidade Reativada` ou `Reativação CRM` | `fechamento − created_at` |
-| **Resgate** | Passou pelo pipeline `Resgate/Nutrição Whats` | `fechamento − created_at` |
-| **Direto** | Nenhum dos acima | `fechamento − created_at` |
+| **Recorrente** | Lead teve qualquer movement em `Clientes - CS` antes do fechamento atual | `entrada_onboarding_at − última 'Venda Ganha' em Onboarding anterior` (fallback: entrada original em Clientes-CS). Se nenhum marco existir → NULL |
+| **Reativada** | Passou pelo status `Oportunidade Reativada` ou `Reativação CRM` | `entrada_onboarding_at − created_at` |
+| **Resgate** | Passou pelo pipeline `Resgate/Nutrição Whats` | `entrada_onboarding_at − created_at` |
+| **Direto** | Nenhum dos acima | `entrada_onboarding_at − created_at` |
 
 A janela do tempo respeita a ocorrência: se um lead fechou em 03/2025 via Direto e em 09/2025 como Recorrente, cada linha em `leads_closed` recebe seu próprio caminho/tempo.
 
@@ -53,6 +53,7 @@ Custom field `Canal de entrada` do lead (ex: `Whats oficial 0078`, `Instagram 1`
 - **Bar chart horizontal** quantidade por canal
 - **Tabela** detalhada (Canal × Qtd × Ticket × Receita)
 - **Matriz** Canal × Caminho
+- **Lista detalhada** com link direto pro Kommo, classificação e tempo — pra revisão manual
 
 Os filtros gerais (período, vendedor, astrônomo, cancelado) da `ClosedFilterBar` se aplicam à aba.
 
