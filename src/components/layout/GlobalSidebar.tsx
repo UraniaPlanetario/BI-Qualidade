@@ -29,47 +29,96 @@ interface AreaConfig {
   children?: NavItem[];
 }
 
-const AREAS: AreaConfig[] = [
+interface AreaSection {
+  id: string;
+  label: string;
+  /** Mostra a seção mesmo se vazia (com placeholder "Em breve"). */
+  showWhenEmpty?: boolean;
+  /** Visível apenas pra global admin (ex: Sistema > Admin). */
+  adminOnly?: boolean;
+  areas: AreaConfig[];
+}
+
+const COMERCIAL_AREA: AreaConfig = {
+  id: 'comercial',
+  label: 'Comercial',
+  icon: TrendingUp,
+  path: '/comercial',
+  children: [
+    {
+      id: 'qualidade-grp',
+      label: 'Qualidade',
+      path: '/comercial/qualidade-grp',
+      children: [
+        { id: 'qualidade', label: 'Qualidade de Fechamento', path: '/comercial/qualidade' },
+        { id: 'monitoramento', label: 'Monitoramento de Usuário', path: '/comercial/monitoramento' },
+      ],
+    },
+    {
+      id: 'desempenho-grp',
+      label: 'Desempenho',
+      path: '/comercial/desempenho-grp',
+      children: [
+        { id: 'desempenho-vendedor', label: 'Desempenho Vendedores', path: '/comercial/desempenho-vendedor' },
+        { id: 'desempenho-sdr', label: 'Desempenho SDR', path: '/comercial/desempenho-sdr' },
+      ],
+    },
+    { id: 'campanhas', label: 'Campanhas Semanais', path: '/comercial/campanhas' },
+    { id: 'leads-fechados', label: 'Leads Fechados', path: '/comercial/leads-fechados' },
+  ],
+};
+
+const SECTIONS: AreaSection[] = [
   {
-    id: 'comercial',
-    label: 'Comercial',
-    icon: TrendingUp,
-    path: '/comercial',
-    children: [
+    id: 'gestao',
+    label: 'Gestão',
+    areas: [
+      COMERCIAL_AREA,
+      { id: 'marketing', label: 'Marketing', icon: Megaphone, path: '/marketing' },
+      { id: 'financeiro', label: 'Financeiro', icon: DollarSign, path: '/financeiro' },
       {
-        id: 'qualidade-grp',
-        label: 'Qualidade',
-        path: '/comercial/qualidade-grp',
+        id: 'onboarding',
+        label: 'Onboarding',
+        icon: GraduationCap,
+        path: '/onboarding',
         children: [
-          { id: 'qualidade', label: 'Qualidade de Fechamento', path: '/comercial/qualidade' },
-          { id: 'monitoramento', label: 'Monitoramento de Usuário', path: '/comercial/monitoramento' },
+          { id: 'calendario-astronomos', label: 'Calendário Astrônomos', path: '/onboarding/calendario-astronomos' },
         ],
       },
+    ],
+  },
+  {
+    id: 'acesso-individual',
+    label: 'Acesso Individual',
+    showWhenEmpty: true,
+    areas: [],
+  },
+  {
+    id: 'sistema',
+    label: 'Sistema',
+    areas: [
+      { id: 'tecnologia', label: 'Tecnologia', icon: Cpu, path: '/tecnologia' },
+    ],
+  },
+  {
+    id: 'sistema-admin',
+    label: '',
+    adminOnly: true,
+    areas: [
       {
-        id: 'desempenho-grp',
-        label: 'Desempenho',
-        path: '/comercial/desempenho-grp',
+        id: 'admin',
+        label: 'Admin',
+        icon: ShieldCheck,
+        path: '/admin',
         children: [
-          { id: 'desempenho-vendedor', label: 'Desempenho Vendedores', path: '/comercial/desempenho-vendedor' },
-          { id: 'desempenho-sdr', label: 'Desempenho SDR', path: '/comercial/desempenho-sdr' },
+          { id: 'admin-users', label: 'Usuários', path: '/admin/usuarios' },
+          { id: 'admin-deptos', label: 'Departamentos', path: '/admin/departamentos' },
+          { id: 'admin-acessos', label: 'Controle de Acesso', path: '/admin/acessos' },
+          { id: 'admin-platforms', label: 'Plataformas', path: '/admin/plataformas' },
         ],
       },
-      { id: 'campanhas', label: 'Campanhas Semanais', path: '/comercial/campanhas' },
-      { id: 'leads-fechados', label: 'Leads Fechados', path: '/comercial/leads-fechados' },
     ],
   },
-  { id: 'marketing', label: 'Marketing', icon: Megaphone, path: '/marketing' },
-  { id: 'financeiro', label: 'Financeiro', icon: DollarSign, path: '/financeiro' },
-  {
-    id: 'onboarding',
-    label: 'Onboarding',
-    icon: GraduationCap,
-    path: '/onboarding',
-    children: [
-      { id: 'calendario-astronomos', label: 'Calendário Astrônomos', path: '/onboarding/calendario-astronomos' },
-    ],
-  },
-  { id: 'tecnologia', label: 'Tecnologia', icon: Cpu, path: '/tecnologia' },
 ];
 
 /** Componente sentinela que avalia `useRouteAccess` para uma rota específica e
@@ -176,107 +225,88 @@ export function GlobalSidebar({ onLogout }: GlobalSidebarProps) {
         <img src={logoUrania} alt="Urânia" className="h-20" />
       </button>
 
-      <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto scrollbar-thin">
-        <p className="text-[10px] font-semibold text-sidebar-foreground/40 uppercase tracking-wider px-3 mb-2">Áreas</p>
-        {AREAS.map((area) => {
-          const Icon = area.icon;
-          const hasChildren = !!area.children?.length;
-          const isExp = expanded[area.id];
-          const active = isActive(area.path);
-          const fav = !hasChildren && isFavorite(area.path);
+      <nav className="flex-1 p-3 overflow-y-auto scrollbar-thin">
+        {SECTIONS.map((section, sIdx) => {
+          if (section.adminOnly && !isGlobalAdmin) return null;
 
-          const areaButton = (
-            <div
-              onClick={() => (hasChildren ? toggleExpand(area.id) : navigate(area.path))}
-              className={`group w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors cursor-pointer ${
-                active && !hasChildren
-                  ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium'
-                  : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground'
-              }`}
-            >
-              <Icon size={18} />
-              <span className="flex-1 text-left">{area.label}</span>
-              {!hasChildren && (
-                <button
-                  type="button"
-                  onClick={(e) => { e.stopPropagation(); toggleFavorite(area.path); }}
-                  className={`p-0.5 rounded transition-opacity ${
-                    fav ? 'text-primary' : 'text-sidebar-foreground/30 opacity-0 group-hover:opacity-100 hover:text-sidebar-foreground/70'
-                  }`}
-                  title={fav ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
-                >
-                  <Star size={12} className={fav ? 'fill-primary' : ''} />
-                </button>
-              )}
-              {hasChildren && (isExp ? <ChevronDown size={14} /> : <ChevronRight size={14} />)}
-            </div>
-          );
+          // Renderiza cada area da seção e filtra as não-acessíveis
+          const renderedAreas = section.areas.map((area) => {
+            const Icon = area.icon;
+            const hasChildren = !!area.children?.length;
+            const isExp = expanded[area.id];
+            const active = isActive(area.path);
+            const fav = !hasChildren && isFavorite(area.path);
 
-          const inner = (
-            <div key={area.id}>
-              {areaButton}
-              {hasChildren && isExp && (
-                <div className="ml-5 mt-0.5 space-y-0.5 border-l border-sidebar-border/50 pl-3">
-                  {area.children!.map((child) => <div key={child.id}>{renderNavItem(child)}</div>)}
-                </div>
-              )}
-            </div>
-          );
+            const areaButton = (
+              <div
+                onClick={() => (hasChildren ? toggleExpand(area.id) : navigate(area.path))}
+                className={`group w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors cursor-pointer ${
+                  active && !hasChildren
+                    ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium'
+                    : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground'
+                }`}
+              >
+                <Icon size={18} />
+                <span className="flex-1 text-left">{area.label}</span>
+                {!hasChildren && (
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); toggleFavorite(area.path); }}
+                    className={`p-0.5 rounded transition-opacity ${
+                      fav ? 'text-primary' : 'text-sidebar-foreground/30 opacity-0 group-hover:opacity-100 hover:text-sidebar-foreground/70'
+                    }`}
+                    title={fav ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
+                  >
+                    <Star size={12} className={fav ? 'fill-primary' : ''} />
+                  </button>
+                )}
+                {hasChildren && (isExp ? <ChevronDown size={14} /> : <ChevronRight size={14} />)}
+              </div>
+            );
 
-          if (hasChildren) {
-            if (!hasAnyAccessibleLeaf(area)) return null;
-            return inner;
-          }
+            const inner = (
+              <div key={area.id}>
+                {areaButton}
+                {hasChildren && isExp && (
+                  <div className="ml-5 mt-0.5 space-y-0.5 border-l border-sidebar-border/50 pl-3">
+                    {area.children!.map((child) => <div key={child.id}>{renderNavItem(child)}</div>)}
+                  </div>
+                )}
+              </div>
+            );
+
+            if (hasChildren) {
+              if (!hasAnyAccessibleLeaf(area)) return null;
+              return inner;
+            }
+
+            return (
+              <RouteLink key={area.id} path={area.path}>
+                {(canAccess) => (canAccess ? inner : null)}
+              </RouteLink>
+            );
+          }).filter(Boolean) as JSX.Element[];
+
+          // Pula a seção se vazia e não tem fallback de "em breve"
+          const isEmpty = renderedAreas.length === 0;
+          if (isEmpty && !section.showWhenEmpty) return null;
 
           return (
-            <RouteLink key={area.id} path={area.path}>
-              {(canAccess) => (canAccess ? inner : null)}
-            </RouteLink>
+            <div key={section.id} className={sIdx > 0 ? 'mt-4' : ''}>
+              {section.label && (
+                <p className="text-[10px] font-semibold text-sidebar-foreground/40 uppercase tracking-wider px-3 mb-2">
+                  {section.label}
+                </p>
+              )}
+              <div className="space-y-0.5">
+                {renderedAreas.length > 0 ? renderedAreas : (
+                  <p className="text-[11px] text-sidebar-foreground/30 italic px-3 py-1">Em breve</p>
+                )}
+              </div>
+            </div>
           );
         })}
 
-        {isGlobalAdmin && (
-          <>
-            <div className="border-t border-sidebar-border/30 my-3" />
-            <button
-              onClick={() => toggleExpand('admin')}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
-                isActive('/admin')
-                  ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium'
-                  : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground'
-              }`}
-            >
-              <ShieldCheck size={18} />
-              <span className="flex-1 text-left">Admin</span>
-              {expanded['admin'] ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-            </button>
-            {expanded['admin'] && (
-              <div className="ml-5 mt-0.5 space-y-0.5 border-l border-sidebar-border/50 pl-3">
-                {[
-                  { id: 'admin-users', label: 'Usuários', path: '/admin/usuarios' },
-                  { id: 'admin-deptos', label: 'Departamentos', path: '/admin/departamentos' },
-                  { id: 'admin-acessos', label: 'Controle de Acesso', path: '/admin/acessos' },
-                  { id: 'admin-platforms', label: 'Plataformas', path: '/admin/plataformas' },
-                ].map((item) => {
-                  const active = location.pathname === item.path;
-                  return (
-                    <button
-                      key={item.id}
-                      onClick={() => navigate(item.path)}
-                      className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition-colors ${
-                        active
-                          ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium'
-                          : 'text-sidebar-foreground/60 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground'
-                      }`}
-                    >
-                      <span className="flex-1 text-left">{item.label}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </>
-        )}
       </nav>
 
       <div className="p-3 border-t border-sidebar-border">
