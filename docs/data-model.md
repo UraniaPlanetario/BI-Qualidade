@@ -685,6 +685,27 @@ LIMIT p_limit;
 
 **Consumida por:** `useTopCamposAlterados` em [`monitoramento/hooks/useConsistenciaData.ts`](../src/areas/comercial/monitoramento/hooks/useConsistenciaData.ts) — usada na sub-aba "Campo alterado" do Monitoramento.
 
+### `gold.leads_closed_origem` (view)
+
+Enriquece `gold.leads_closed` com classificação de **caminho no CRM** e **tempo canônico até fechar**, consumida pela aba "Por Origem" do dashboard [Leads Fechados](dashboards/leads-fechados.md).
+
+Hierarquia (1 caminho por ocorrência de fechamento — `gold.leads_closed.occurrence`):
+
+```
+1. Recorrente — passou pelo pipeline 'Clientes - CS' antes do fechamento
+2. Reativada — passou pelo status 'Oportunidade Reativada' / 'Reativação CRM'
+3. Resgate   — passou pelo pipeline 'Resgate/Nutrição Whats'
+4. Direto    — nenhum dos acima
+```
+
+Colunas adicionadas:
+- `caminho_origem` (text) — uma das 4 categorias acima
+- `entrada_caminho_at` (timestamptz) — marco temporal usado pra calcular o tempo
+- `tempo_dias_caminho` (numeric, 1 casa) — janela do caminho (Recorrente: desde última entrada em Clientes-CS; Reativada: desde reativação; Resgate: desde entrada no resgate; Direto: desde criação)
+- `tempo_dias_total` (numeric) — tempo desde criação (sempre, pra comparação)
+
+A view é leve: agrega `gold.leads_movements` filtrado por `moved_at < fechamento_ts` por lead — joins materializam em ~1s pra ~500 fechamentos. Sem refresh necessário.
+
 ### `gold.agendamentos_astronomos`
 
 Uma linha por tarefa do funil "Astrônomos" (`bronze.kommo_tasks` + `bronze.kommo_task_types` + custom fields do `bronze.kommo_leads_raw`). Consumida pelo dashboard [Calendário Astrônomos](dashboards/calendario-astronomos.md).

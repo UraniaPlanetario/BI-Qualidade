@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
-import { LeadClosed, ClosedFilters } from '../types';
+import { LeadClosed, LeadClosedOrigem, ClosedFilters } from '../types';
 import { useMemo } from 'react';
 
 export function useClosedLeads() {
@@ -24,6 +24,34 @@ export function useClosedLeads() {
         from += pageSize;
       }
       return allData;
+    },
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+  });
+}
+
+/** Leads fechados enriquecidos com classificação de caminho no CRM (gold.leads_closed_origem). */
+export function useLeadsOrigem() {
+  return useQuery<LeadClosedOrigem[]>({
+    queryKey: ['leads_closed_origem'],
+    queryFn: async () => {
+      const all: LeadClosedOrigem[] = [];
+      let from = 0;
+      const pageSize = 1000;
+      while (true) {
+        const { data, error } = await supabase
+          .schema('gold')
+          .from('leads_closed_origem')
+          .select('*')
+          .order('data_fechamento_fmt', { ascending: false, nullsFirst: false })
+          .range(from, from + pageSize - 1);
+        if (error) throw error;
+        if (!data || data.length === 0) break;
+        all.push(...(data as LeadClosedOrigem[]));
+        if (data.length < pageSize) break;
+        from += pageSize;
+      }
+      return all;
     },
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,

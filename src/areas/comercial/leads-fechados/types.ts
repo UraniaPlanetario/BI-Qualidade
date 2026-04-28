@@ -34,6 +34,42 @@ export interface LeadClosed {
   custom_fields: Record<string, any> | null;
 }
 
+export type CaminhoOrigem = 'Direto' | 'Recorrente' | 'Reativada' | 'Resgate';
+
+export interface LeadClosedOrigem extends LeadClosed {
+  caminho_origem: CaminhoOrigem;
+  entrada_caminho_at: string | null;
+  tempo_dias_caminho: number | null;
+  tempo_dias_total: number | null;
+}
+
+export const CAMINHO_COLORS: Record<CaminhoOrigem, string> = {
+  Direto:     '#3b82f6',
+  Reativada:  '#f59e0b',
+  Resgate:    '#ec4899',
+  Recorrente: '#10b981',
+};
+
+export const CAMINHO_DESCRIPTIONS: Record<CaminhoOrigem, string> = {
+  Direto:     'Lead chegou e fechou sem desvios — fluxo padrão.',
+  Recorrente: 'Cliente que já era da base (passou por Clientes - CS) e fechou novamente. Tempo medido desde a última entrada em Clientes - CS.',
+  Reativada:  'Lead que passou pela etapa "Oportunidade Reativada" / "Reativação CRM" no caminho até fechar.',
+  Resgate:    'Lead que passou pelo pipeline "Resgate/Nutrição Whats" antes de fechar.',
+};
+
+/** Normaliza o canal de entrada (alguns leads salvam JSON array como string). */
+export function normalizeCanal(raw: string | null | undefined): string {
+  if (!raw) return '(sem canal)';
+  const trimmed = raw.trim();
+  if (trimmed.startsWith('[')) {
+    try {
+      const arr = JSON.parse(trimmed);
+      if (Array.isArray(arr) && arr.length > 0) return String(arr[0]);
+    } catch { /* ignore */ }
+  }
+  return trimmed;
+}
+
 export interface ClosedFilters {
   vendedores: string[];
   astronomos: string[];

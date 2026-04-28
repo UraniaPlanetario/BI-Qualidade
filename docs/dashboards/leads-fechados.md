@@ -11,15 +11,48 @@ Operacional: quantos leads foram fechados, por quem, com quantas diárias e qual
 ```
 src/areas/comercial/leads-fechados/
 ├── pages/Dashboard.tsx
-├── hooks/useClosedLeads.ts
+├── hooks/useClosedLeads.ts          # useClosedLeads + useLeadsOrigem
 ├── types.ts
 └── components/
     ├── ClosedFilterBar.tsx
     ├── OverviewBlock.tsx
     ├── VendedorBlock.tsx
     ├── AstronomoBlock.tsx
+    ├── OrigemBlock.tsx              # nova aba "Por Origem"
     └── DetailBlock.tsx
 ```
+
+## Aba "Por Origem"
+
+Análise dos fechamentos sob duas perspectivas independentes, lendo de [`gold.leads_closed_origem`](../data-model.md#gold-leads-closed-origem-view):
+
+### Caminho no CRM (1 caminho por ocorrência de fechamento)
+
+Hierarquia de classificação — o **primeiro** critério atendido vence:
+
+| Caminho | Critério | Tempo medido |
+|---|---|---|
+| **Recorrente** | Lead passou pelo pipeline `Clientes - CS` antes deste fechamento | `fechamento − última entrada em Clientes-CS` |
+| **Reativada** | Passou pelo status `Oportunidade Reativada` ou `Reativação CRM` | `fechamento − última entrada na etapa de reativação` |
+| **Resgate** | Passou pelo pipeline `Resgate/Nutrição Whats` | `fechamento − última entrada no resgate` |
+| **Direto** | Nenhum dos acima | `fechamento − created_at` |
+
+A janela do tempo respeita a ocorrência: se um lead fechou em 03/2025 via Resgate e em 09/2025 como Recorrente, cada linha em `leads_closed` recebe seu próprio caminho/tempo.
+
+### Canal de entrada
+
+Custom field `Canal de entrada` do lead (ex: `Whats oficial 0078`, `Instagram 1`, `Tráfego`). Normalizado no frontend (helper `normalizeCanal` extrai o primeiro valor de arrays JSON stringificados; nulos viram `(sem canal)`).
+
+### Visuais
+
+- **4 cards** por caminho (qtd, ticket médio, tempo médio + tooltip com a regra)
+- **Bar chart** quantidade por caminho
+- **Bar chart** tempo médio por caminho (em dias)
+- **Bar chart horizontal** quantidade por canal
+- **Tabela** detalhada (Canal × Qtd × Ticket × Receita)
+- **Matriz** Canal × Caminho
+
+Os filtros gerais (período, vendedor, astrônomo, cancelado) da `ClosedFilterBar` se aplicam à aba.
 
 ## Fonte de dados
 
