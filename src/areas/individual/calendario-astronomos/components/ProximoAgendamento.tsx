@@ -1,9 +1,9 @@
 import { useMemo } from 'react';
-import { Calendar as CalIcon, MapPin, Phone, Users as UsersIcon, Tag, GraduationCap, ExternalLink } from 'lucide-react';
+import { MapPin, Phone, Users as UsersIcon, Tag, GraduationCap, ExternalLink } from 'lucide-react';
 import type { Agendamento } from '@/areas/onboarding/calendario-astronomos/types';
 import {
   formatDateTime, formatCurrency, statusLabel, statusColorClass,
-  colorForAstronomo, kommoLeadUrl,
+  colorForAstronomo, kommoLeadUrl, formatPhone, googleMapsUrl,
 } from '@/areas/onboarding/calendario-astronomos/types';
 
 interface Props {
@@ -77,28 +77,39 @@ export function ProximoAgendamento({ agendamentos }: Props) {
             <Field icon={Tag} label="Nº de diárias" value={a.numero_diarias} />
             <Field icon={UsersIcon} label="Nº de alunos" value={a.numero_alunos} />
             <Field icon={Tag} label="Cúpula" value={a.cupula} />
-            <Field icon={Tag} label="Segmento" value={a.segmento} />
             <Field icon={Tag} label="Produtos" value={a.produtos} colSpan />
             <Field icon={Tag} label="Conteúdo da apresentação" value={a.conteudo_apresentacao} colSpan />
             <Field icon={MapPin} label="Endereço / local" value={a.local_instalacao ?? a.endereco} colSpan />
             <Field icon={GraduationCap} label="Responsável da escola" value={a.responsavel_evento} />
-            <Field icon={Phone} label="Telefone" value={a.telefone_responsavel} />
+            <Field icon={Phone} label="Telefone" value={formatPhone(a.telefone_responsavel)} />
             <Field icon={Tag} label="Cliente desde" value={a.cliente_desde} />
             <Field icon={Tag} label="Produtos já contratados" value={a.produtos_contratados} colSpan />
             <Field icon={Tag} label="Brinde" value={a.brinde} />
             <Field icon={Tag} label="Valor" value={formatCurrency(a.valor_venda)} />
           </div>
 
-          {kommoLeadUrl(a.lead_id) && (
-            <a
-              href={kommoLeadUrl(a.lead_id)!}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-primary hover:underline text-xs mt-2"
-            >
-              Abrir no Kommo <ExternalLink size={11} />
-            </a>
-          )}
+          <div className="flex items-center gap-3 mt-2">
+            {googleMapsUrl(a) && (
+              <a
+                href={googleMapsUrl(a)!}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-primary hover:underline text-xs"
+              >
+                <MapPin size={11} /> Ver no mapa
+              </a>
+            )}
+            {kommoLeadUrl(a.lead_id) && (
+              <a
+                href={kommoLeadUrl(a.lead_id)!}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-primary hover:underline text-xs"
+              >
+                Abrir no Kommo <ExternalLink size={11} />
+              </a>
+            )}
+          </div>
         </div>
       </div>
     </div>

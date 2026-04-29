@@ -120,6 +120,38 @@ export function kommoLeadUrl(leadId: number | null | undefined): string | null {
   return `https://uraniaplanetario.kommo.com/leads/detail/${leadId}`;
 }
 
+/** Formata telefone BR pra "+55 (DD) NNNNN-NNNN". Aceita variações (com/sem DDI,
+ *  fixo/celular). Retorna o valor original se não casar com nenhum padrão. */
+export function formatPhone(raw: string | null | undefined): string {
+  if (!raw) return '—';
+  const digits = raw.replace(/\D/g, '');
+  if (digits.length === 13 && digits.startsWith('55')) {
+    return `+55 (${digits.slice(2, 4)}) ${digits.slice(4, 9)}-${digits.slice(9)}`;
+  }
+  if (digits.length === 12 && digits.startsWith('55')) {
+    return `+55 (${digits.slice(2, 4)}) ${digits.slice(4, 8)}-${digits.slice(8)}`;
+  }
+  if (digits.length === 11) {
+    return `+55 (${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+  }
+  if (digits.length === 10) {
+    return `+55 (${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+  }
+  return raw;
+}
+
+/** Gera URL do Google Maps pro agendamento. Prioriza coordenadas precisas;
+ *  cai pra busca por endereço/cidade quando não há lat/long. */
+export function googleMapsUrl(a: Pick<Agendamento, 'latitude' | 'longitude' | 'endereco' | 'cidade_estado' | 'nome_escola'>): string | null {
+  if (a.latitude != null && a.longitude != null) {
+    return `https://www.google.com/maps/search/?api=1&query=${a.latitude},${a.longitude}`;
+  }
+  const parts = [a.endereco, a.cidade_estado].filter(Boolean).join(', ');
+  if (parts) return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(parts)}`;
+  if (a.nome_escola) return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(a.nome_escola)}`;
+  return null;
+}
+
 export interface LeadOnboardingSemVisita {
   lead_id: number;
   pipeline_name: string;

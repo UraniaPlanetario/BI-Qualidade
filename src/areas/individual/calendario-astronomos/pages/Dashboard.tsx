@@ -109,7 +109,7 @@ export default function MeuCalendarioDashboard() {
                 <h3 className="text-sm font-semibold mb-2 text-muted-foreground">
                   Lista ({abertos.length})
                 </h3>
-                <ListaAgendamentos agendamentos={abertos} onSelect={setSelected} />
+                <ListaAgendamentos agendamentos={abertos} onSelect={setSelected} compact />
               </div>
             </div>
           )}
@@ -118,6 +118,7 @@ export default function MeuCalendarioDashboard() {
             <ListaAgendamentos
               agendamentos={concluidos}
               onSelect={setSelected}
+              compact
               emptyLabel="Você ainda não tem visitas concluídas no histórico."
             />
           )}
@@ -126,6 +127,7 @@ export default function MeuCalendarioDashboard() {
             open={!!selected}
             agendamento={selected}
             onClose={() => setSelected(null)}
+            compact
           />
         </>
       )}

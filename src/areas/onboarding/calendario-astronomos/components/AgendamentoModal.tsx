@@ -3,7 +3,7 @@ import { X, MapPin, Calendar as CalIcon, GraduationCap, Tag, Phone, Users as Use
 import {
   Agendamento, AuditFlags, formatDateTime, formatDate, formatCurrency, statusLabel, statusColorClass,
   colorForAstronomo, astronomoDisplay, nomesBatem, datasBatem, auditoriaTarefaSuspeita,
-  kommoLeadUrl, getFlags,
+  kommoLeadUrl, getFlags, formatPhone, googleMapsUrl,
 } from '../types';
 
 interface Props {
@@ -11,9 +11,12 @@ interface Props {
   agendamento: Agendamento | null;
   onClose: () => void;
   auditFlags?: Map<number, AuditFlags>;
+  /** Modo "individual": esconde nome do astrônomo, data_agendamento, segmento
+   *  e astronomo_card — informações redundantes pra quem é o próprio astrônomo. */
+  compact?: boolean;
 }
 
-export function AgendamentoModal({ open, agendamento, onClose, auditFlags }: Props) {
+export function AgendamentoModal({ open, agendamento, onClose, auditFlags, compact }: Props) {
   if (!open || !agendamento) return null;
   const a = agendamento;
   const f = auditFlags
@@ -39,7 +42,9 @@ export function AgendamentoModal({ open, agendamento, onClose, auditFlags }: Pro
                 style={{ background: colorForAstronomo(a.astronomo) }}
               />
               <span className="text-xs font-semibold tracking-wide text-muted-foreground">
-                {astronomoDisplay(a.astronomo)} · {a.desc_tarefa ?? '—'}
+                {compact
+                  ? (a.desc_tarefa ?? '—')
+                  : `${astronomoDisplay(a.astronomo)} · ${a.desc_tarefa ?? '—'}`}
               </span>
               <span className={`text-xs px-2 py-0.5 rounded-full border ${statusColorClass(a.status_tarefa)}`}>
                 {statusLabel(a.status_tarefa)}
@@ -62,20 +67,24 @@ export function AgendamentoModal({ open, agendamento, onClose, auditFlags }: Pro
         )}
 
         <div className="p-4 grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
-          <Field icon={CalIcon} label="Tarefa programada para" value={formatDateTime(a.data_conclusao)} />
-          <Field icon={CalIcon} label="Data agendada (lead)" value={formatDateTime(a.data_agendamento)} />
+          <Field icon={CalIcon} label="Data da tarefa" value={formatDateTime(a.data_conclusao)} colSpan={compact} />
+          {!compact && (
+            <Field icon={CalIcon} label="Data agendada (lead)" value={formatDateTime(a.data_agendamento)} />
+          )}
           <Field icon={Tag} label="Turno" value={a.turno} />
           <Field icon={Tag} label="Nº de diárias" value={a.numero_diarias} />
           <Field icon={UsersIcon} label="Nº de alunos" value={a.numero_alunos} />
           <Field icon={Tag} label="Cúpula" value={a.cupula} />
-          <Field icon={Tag} label="Segmento" value={a.segmento} />
+          {!compact && <Field icon={Tag} label="Segmento" value={a.segmento} />}
           <Field icon={Tag} label="Produtos" value={a.produtos} />
           <Field icon={Tag} label="Conteúdo da apresentação" value={a.conteudo_apresentacao} colSpan />
           <Field icon={MapPin} label="Endereço" value={a.endereco} colSpan />
           <Field icon={MapPin} label="Local de instalação" value={a.local_instalacao} colSpan />
-          <Field icon={GraduationCap} label="Astrônomo (no card do lead)" value={a.astronomo_card} />
+          {!compact && (
+            <Field icon={GraduationCap} label="Astrônomo (no card do lead)" value={a.astronomo_card} />
+          )}
           <Field icon={GraduationCap} label="Responsável da escola" value={a.responsavel_evento} />
-          <Field icon={Phone} label="Telefone" value={a.telefone_responsavel} />
+          <Field icon={Phone} label="Telefone" value={formatPhone(a.telefone_responsavel)} />
           <Field icon={Tag} label="Brinde" value={a.brinde} />
           <Field icon={Tag} label="Valor da venda" value={formatCurrency(a.valor_venda)} />
           <Field icon={Tag} label="Cliente desde" value={a.cliente_desde} />
@@ -87,9 +96,19 @@ export function AgendamentoModal({ open, agendamento, onClose, auditFlags }: Pro
           {a.avaliacao_astronomo && <Field icon={Tag} label="Avaliação astrônomo" value={a.avaliacao_astronomo} colSpan />}
         </div>
 
-        <div className="px-4 py-2 border-t text-[10px] text-muted-foreground flex justify-between items-center">
+        <div className="px-4 py-2 border-t text-[10px] text-muted-foreground flex justify-between items-center flex-wrap gap-2">
           <span>Tarefa #{a.task_id}</span>
-          <span className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
+            {googleMapsUrl(a) && (
+              <a
+                href={googleMapsUrl(a)!}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-primary hover:underline"
+              >
+                <MapPin size={10} /> Ver no mapa
+              </a>
+            )}
             {kommoLeadUrl(a.lead_id) && (
               <a
                 href={kommoLeadUrl(a.lead_id)!}
@@ -101,7 +120,7 @@ export function AgendamentoModal({ open, agendamento, onClose, auditFlags }: Pro
               </a>
             )}
             <span>Lead #{a.lead_id ?? '—'} · criado em {formatDate(a.data_criacao)}</span>
-          </span>
+          </div>
         </div>
       </div>
     </div>,
