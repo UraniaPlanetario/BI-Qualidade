@@ -22,13 +22,22 @@ export default function MeuCalendarioDashboard() {
   const [tab, setTab] = useState<TabId>('agenda');
   const [selected, setSelected] = useState<Agendamento | null>(null);
 
+  // Usa status_tarefa (mais explícito) em vez de is_completed:
+  //   'completa' = realmente concluída
+  //   'aberta' / 'atrasada' = ainda em aberto (independente da data)
+  // Abertos ordenados ASC (mais perto pro mais longe).
+  // Concluídas ordenadas DESC (mais recentes primeiro).
   const abertos = useMemo(
-    () => agendamentos.filter((a) => !a.is_completed),
+    () => agendamentos
+      .filter((a) => a.status_tarefa !== 'completa')
+      .sort((a, b) =>
+        (a.data_conclusao ?? '').localeCompare(b.data_conclusao ?? '')
+      ),
     [agendamentos],
   );
   const concluidos = useMemo(
     () => agendamentos
-      .filter((a) => a.is_completed)
+      .filter((a) => a.status_tarefa === 'completa')
       .sort((a, b) =>
         (b.data_conclusao ?? '').localeCompare(a.data_conclusao ?? '')
       ),

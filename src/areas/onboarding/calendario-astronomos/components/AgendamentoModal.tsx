@@ -1,7 +1,7 @@
 import { createPortal } from 'react-dom';
 import { X, MapPin, Calendar as CalIcon, GraduationCap, Tag, Phone, Users as UsersIcon, ExternalLink } from 'lucide-react';
 import {
-  Agendamento, AuditFlags, formatDateTime, formatDate, formatCurrency, statusLabel, statusColorClass,
+  Agendamento, AuditFlags, formatDateTime, formatDate, formatDataVisita, formatCurrency, statusLabel, statusColorClass,
   colorForAstronomo, astronomoDisplay, nomesBatem, datasBatem, auditoriaTarefaSuspeita,
   kommoLeadUrl, getFlags, formatPhone, googleMapsUrl,
 } from '../types';
@@ -67,7 +67,7 @@ export function AgendamentoModal({ open, agendamento, onClose, auditFlags, compa
         )}
 
         <div className="p-4 grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
-          <Field icon={CalIcon} label="Data da tarefa" value={formatDateTime(a.data_conclusao)} colSpan={compact} />
+          <Field icon={CalIcon} label="Data da visita" value={formatDataVisita(a)} colSpan={compact} />
           {!compact && (
             <Field icon={CalIcon} label="Data agendada (lead)" value={formatDateTime(a.data_agendamento)} />
           )}

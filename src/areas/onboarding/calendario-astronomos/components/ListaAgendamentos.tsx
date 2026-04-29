@@ -1,6 +1,6 @@
 import type { Agendamento, AuditFlags } from '../types';
 import {
-  colorForAstronomo, astronomoDisplay, formatDateTime, statusLabel, statusColorClass,
+  colorForAstronomo, astronomoDisplay, formatDataVisita, statusLabel, statusColorClass,
   nomesBatem, datasBatem, auditoriaTarefaSuspeita, getFlags,
 } from '../types';
 import { AlertTriangle, MapPin } from 'lucide-react';
@@ -53,31 +53,31 @@ export function ListaAgendamentos({
               aria-hidden
             />
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-xs font-semibold text-muted-foreground">
-                  {compact
-                    ? (a.desc_tarefa ?? '—')
-                    : `${astronomoDisplay(a.astronomo)} · ${a.desc_tarefa ?? '—'}`}
-                </span>
-                <span className={`text-[10px] px-1.5 py-0.5 rounded-full border ${statusColorClass(a.status_tarefa)}`}>
-                  {statusLabel(a.status_tarefa)}
-                </span>
-                {hasFlag && (
-                  <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full border border-amber-500/40 bg-amber-500/10 text-amber-700">
-                    <AlertTriangle size={10} />
-                    {flagNome && 'nome'}
-                    {flagNome && (flagData || flagTarefa) && ' · '}
-                    {flagData && 'data'}
-                    {flagData && flagTarefa && ' · '}
-                    {flagTarefa && 'tarefa'}
+              {!compact && (
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-xs font-semibold text-muted-foreground">
+                    {astronomoDisplay(a.astronomo)} · {a.desc_tarefa ?? '—'}
                   </span>
-                )}
-              </div>
-              <p className="text-sm font-medium mt-0.5 truncate">
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full border ${statusColorClass(a.status_tarefa)}`}>
+                    {statusLabel(a.status_tarefa)}
+                  </span>
+                  {hasFlag && (
+                    <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full border border-amber-500/40 bg-amber-500/10 text-amber-700">
+                      <AlertTriangle size={10} />
+                      {flagNome && 'nome'}
+                      {flagNome && (flagData || flagTarefa) && ' · '}
+                      {flagData && 'data'}
+                      {flagData && flagTarefa && ' · '}
+                      {flagTarefa && 'tarefa'}
+                    </span>
+                  )}
+                </div>
+              )}
+              <p className={`text-sm font-medium truncate ${compact ? '' : 'mt-0.5'}`}>
                 {a.nome_escola ?? '(escola não vinculada)'}
               </p>
               <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-3 flex-wrap">
-                <span>{formatDateTime(a.data_conclusao)}</span>
+                <span>{formatDataVisita(a)}</span>
                 {a.cidade_estado && (
                   <span className="inline-flex items-center gap-0.5">
                     <MapPin size={10} /> {a.cidade_estado}

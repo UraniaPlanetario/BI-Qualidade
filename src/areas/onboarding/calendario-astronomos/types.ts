@@ -140,6 +140,26 @@ export function formatPhone(raw: string | null | undefined): string {
   return raw;
 }
 
+/** Formata data REAL da visita: pega o DIA da tarefa (`data_conclusao`) e a
+ *  HORA do agendamento (`data_agendamento`). O time costuma marcar a tarefa
+ *  com 23:59 pra não vencer ao longo do dia, então a hora real da visita
+ *  vem do custom field "Data e Hora do Agendamento" do lead.
+ *
+ *  Quando não há `data_agendamento`, retorna só o dia. */
+export function formatDataVisita(
+  a: Pick<Agendamento, 'data_conclusao' | 'data_agendamento'>,
+): string {
+  if (!a.data_conclusao) return '—';
+  const dia = new Date(a.data_conclusao).toLocaleDateString('pt-BR', {
+    day: '2-digit', month: '2-digit', year: 'numeric',
+  });
+  if (!a.data_agendamento) return dia;
+  const hora = new Date(a.data_agendamento).toLocaleTimeString('pt-BR', {
+    hour: '2-digit', minute: '2-digit',
+  });
+  return `${dia} · ${hora}`;
+}
+
 /** Gera URL do Google Maps pro agendamento. Prioriza coordenadas precisas;
  *  cai pra busca por endereço/cidade quando não há lat/long. */
 export function googleMapsUrl(a: Pick<Agendamento, 'latitude' | 'longitude' | 'endereco' | 'cidade_estado' | 'nome_escola'>): string | null {
