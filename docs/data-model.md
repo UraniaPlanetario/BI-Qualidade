@@ -68,6 +68,7 @@ Configurados via `pg_cron`, disparam edge functions por `pg_net`. Horários em U
 | 10 | `sync-kommo-leads-daily` | `15 7 * * *` | 07:15 | 04:15 | Puxa leads atualizados → `bronze.kommo_leads_raw` |
 | 11 | `sync-kommo-quality-daily` | `30 7 * * *` | 07:30 | 04:30 | Extrai campos de qualidade → `gold.leads_quality` (via `extract-quality-data-daily`) |
 | 14 | `sync-kommo-tasks-daily` | `45 7 * * *` | 07:45 | 04:45 | Puxa tasks abertas do Kommo → `bronze.kommo_tasks` |
+| — | `sync-kommo-companies-daily` | `0 8 * * *` | 08:00 | 05:00 | Puxa empresas → `bronze.kommo_companies_raw` + faz backfill bidirecional do `company_id` em leads via `_embedded.leads` |
 | 12 | `refresh-gold-tables-daily` | `0 8 * * *` | 08:00 | 05:00 | Roda todas as `refresh_*()` RPCs para reconstruir `gold.*` |
 | 13 | `check-sync-health-daily` | `30 8 * * *` | 08:30 | 05:30 | Valida que o pipeline rodou e loga falhas |
 
@@ -123,8 +124,25 @@ Snapshot atual de todos os leads. Atualizado incrementalmente (leads modificados
 | `is_deleted` | bool | Marcador de deleção lógica |
 | `pipeline_name`, `status_name`, `responsible_user_name` | text | Denormalizados para queries rápidas |
 | `custom_fields` | jsonb | Dicionário `{"Nome do Campo": "valor"}` com todos os custom fields do lead |
+| `company_id` | bigint | FK opcional pra `kommo_companies_raw.id` (extraído de `_embedded.companies[0].id`). Lead → empresa é 1:1 na prática. Reforçado também pelo `sync-kommo-companies` via `_embedded.leads`. |
 
-**Índices:** PK `id`, `pipeline_id`, `status_id`, `responsible_user_id`, `created_at DESC`, `closed_at`, `pipeline_name WHERE NOT NULL`.
+**Índices:** PK `id`, `pipeline_id`, `status_id`, `responsible_user_id`, `created_at DESC`, `closed_at`, `pipeline_name WHERE NOT NULL`, `company_id`.
+
+### `bronze.kommo_companies_raw`
+
+Snapshot das empresas (entidade Company do Kommo). Atualizada diariamente pelo cron `sync-kommo-companies-daily` (8:00 UTC). Usado pelo card de agendamentos dos astrônomos pra trazer endereço, cidade/estado, local da cúpula e turno do dia.
+
+| Coluna | Tipo | Descrição |
+|---|---|---|
+| `id` | bigint PK | ID da empresa no Kommo |
+| `name` | text | Nome da empresa/escola |
+| `responsible_user_id`, `responsible_user_name` | | Vendedor/SDR responsável |
+| `created_at`, `updated_at`, `closest_task_at` | timestamptz | Datas |
+| `is_deleted` | bool | Deleção lógica |
+| `custom_fields` | jsonb | `{name → value}` — útil pra fields de nome único (Cidade, Estado, Local, Turno) |
+| `custom_fields_by_id` | jsonb | `{field_id → value}` — necessário pra desambiguar fields de nome duplicado. Existem **2 fields chamados "Endereço"** (`id=586024 ADDRESS` correto, e `id=852349`). Sempre pegar o `586024` por field_id. |
+
+A sync também faz **backfill bidirecional** em `kommo_leads_raw.company_id` via `_embedded.leads` de cada empresa — necessário porque o `sync-kommo-leads-daily` só puxa leads atualizados nos últimos 3 dias, e leads antigos não teriam company_id.
 
 ### `bronze.kommo_tasks` (~16k linhas)
 
