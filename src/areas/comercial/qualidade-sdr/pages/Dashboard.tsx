@@ -11,6 +11,12 @@ import {
 import type { Etapa, QualidadeSDRRow, QualidadeSDRFilters, ValorCriterio } from '../types';
 import { MultiSelect } from '@/components/MultiSelect';
 import { DateRangePicker } from '@/components/DateRangePicker';
+import { QualitativeBlock } from '../components/QualitativeBlock';
+
+const SECTIONS = [
+  { id: 'quantitativo', label: 'Quantitativo' },
+  { id: 'qualitativo',  label: 'Qualitativo' },
+];
 
 const TOOLTIP_STYLE = {
   contentStyle: { backgroundColor: 'hsl(240, 10%, 10%)', border: 'none', borderRadius: 8 },
@@ -25,6 +31,7 @@ const VALOR_COR: Record<string, string> = {
 export default function QualidadeSDRDashboard() {
   const { data: rows = [], isLoading } = useQualidadeSDR();
   const [filtros, setFiltros] = useState<QualidadeSDRFilters>(FILTROS_DEFAULT);
+  const [activeSection, setActiveSection] = useState<'quantitativo' | 'qualitativo'>('quantitativo');
 
   const filtrados = useMemo(() => {
     return rows.filter((r) => {
@@ -163,7 +170,26 @@ export default function QualidadeSDRDashboard() {
         </div>
       </div>
 
-      {avaliados.length === 0 ? (
+      {/* Tabs */}
+      <div className="card-glass p-1 rounded-xl flex flex-wrap gap-1">
+        {SECTIONS.map(({ id, label }) => (
+          <button
+            key={id}
+            onClick={() => setActiveSection(id as typeof activeSection)}
+            className={`px-4 py-2 rounded-lg text-sm transition-colors ${
+              activeSection === id
+                ? 'bg-primary text-white font-medium'
+                : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {activeSection === 'qualitativo' ? (
+        <QualitativeBlock rows={filtrados} />
+      ) : avaliados.length === 0 ? (
         <div className="card-glass p-12 rounded-xl text-center">
           <p className="text-lg font-semibold text-foreground">Sem avaliações no período</p>
           <p className="text-sm text-muted-foreground mt-1 max-w-md mx-auto">

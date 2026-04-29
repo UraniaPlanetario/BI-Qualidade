@@ -46,7 +46,21 @@ export interface QualidadeSDRRow {
   nota_c3: number | null;
   nota_c4: number | null;
   nota_c5: number | null;
+
+  /** Avaliação qualitativa preenchida pela líder de qualidade (mesma fonte
+   *  da aba Qualitativo da Qualidade de Fechamento). */
+  score_qualidade: string | null;
+  observacoes_gerais: string | null;
+  ponto_critico: string | null;
 }
+
+/** Cores por faixa de score (espelha o mapping da Qualidade de Fechamento). */
+export const SCORE_COLORS: Record<string, string> = {
+  '90–100 → Excelente': 'hsl(142, 71%, 30%)',
+  '75–89 → Bom':        'hsl(142, 60%, 50%)',
+  '60–74 → Regular':    'hsl(45, 93%, 47%)',
+  '<60 → Crítico':      'hsl(0, 72%, 51%)',
+};
 
 /** Crítérios de cada etapa (chave da row, label, peso). Usado na visualização de distribuição. */
 export const CRITERIOS: Record<Etapa, { key: keyof QualidadeSDRRow; label: string; peso: number }[]> = {
