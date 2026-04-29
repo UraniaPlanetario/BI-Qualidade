@@ -58,6 +58,17 @@ export function useLeadsOrigem() {
   });
 }
 
+/** Pega a string YYYY-MM-DD do campo de referência. Cancelados fora de
+ *  modo "criacao" usam data de cancelamento como referência (mantém a regra
+ *  antiga). Em modo "criacao", sempre lead_created_at. */
+function getRefDate(l: LeadClosed, dateRef: 'fechamento' | 'criacao'): string | null {
+  if (dateRef === 'criacao') {
+    return l.lead_created_at?.slice(0, 10) ?? null;
+  }
+  const ref = l.cancelado ? l.data_cancelamento_fmt : l.data_fechamento_fmt;
+  return ref?.slice(0, 10) ?? null;
+}
+
 export function useFilteredClosed(leads: LeadClosed[], filters: ClosedFilters) {
   return useMemo(() => {
     return leads.filter((l) => {
@@ -65,9 +76,8 @@ export function useFilteredClosed(leads: LeadClosed[], filters: ClosedFilters) {
       if (filters.astronomos.length > 0 && !filters.astronomos.includes(l.astronomo || '')) return false;
       if (filters.cancelado === 'sim' && !l.cancelado) return false;
       if (filters.cancelado === 'nao' && l.cancelado) return false;
-      const refDateStr = l.cancelado ? l.data_cancelamento_fmt : l.data_fechamento_fmt;
-      if (!refDateStr) return false;
-      const ref = refDateStr.slice(0, 10); // YYYY-MM-DD
+      const ref = getRefDate(l, filters.dateRef);
+      if (!ref) return false;
       if (filters.dateRange.from) {
         const y = filters.dateRange.from.getFullYear();
         const m = String(filters.dateRange.from.getMonth() + 1).padStart(2, '0');

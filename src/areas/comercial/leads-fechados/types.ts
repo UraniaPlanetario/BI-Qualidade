@@ -70,11 +70,22 @@ export function normalizeCanal(raw: string | null | undefined): string {
   return trimmed;
 }
 
+export type DateRefField = 'fechamento' | 'criacao';
+
+export const DATE_REF_LABELS: Record<DateRefField, string> = {
+  fechamento: 'Data de Fechamento',
+  criacao: 'Data de Criação',
+};
+
 export interface ClosedFilters {
   vendedores: string[];
   astronomos: string[];
   cancelado: 'all' | 'sim' | 'nao';
   dateRange: { from: Date | null; to: Date | null };
+  /** Qual data usar como referência pro filtro de período + agrupamentos
+   *  temporais. 'fechamento' = data_fechamento_fmt (ou cancelamento, se
+   *  cancelado). 'criacao' = lead_created_at. Padrão: fechamento. */
+  dateRef: DateRefField;
 }
 
 export function formatDateBR(dateStr: string | null): string {

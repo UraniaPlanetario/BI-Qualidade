@@ -55,7 +55,9 @@ export function OrigemBlock({ filters }: Props) {
       if (filters.astronomos.length > 0 && !filters.astronomos.includes(l.astronomo || '')) return false;
       if (filters.cancelado === 'sim' && !l.cancelado) return false;
       if (filters.cancelado === 'nao' && l.cancelado) return false;
-      const refDateStr = l.cancelado ? l.data_cancelamento_fmt : l.data_fechamento_fmt;
+      const refDateStr = filters.dateRef === 'criacao'
+        ? l.lead_created_at
+        : (l.cancelado ? l.data_cancelamento_fmt : l.data_fechamento_fmt);
       if (!refDateStr) return false;
       const ref = refDateStr.slice(0, 10);
       if (filters.dateRange.from) {
@@ -84,7 +86,9 @@ export function OrigemBlock({ filters }: Props) {
       if (filters.astronomos.length > 0 && !filters.astronomos.includes(l.astronomo || '')) return false;
       if (filters.cancelado === 'sim' && !l.cancelado) return false;
       if (filters.cancelado === 'nao' && l.cancelado) return false;
-      const refDateStr = l.cancelado ? l.data_cancelamento_fmt : l.data_fechamento_fmt;
+      const refDateStr = filters.dateRef === 'criacao'
+        ? l.lead_created_at
+        : (l.cancelado ? l.data_cancelamento_fmt : l.data_fechamento_fmt);
       if (!refDateStr) return false;
       const ref = refDateStr.slice(0, 10);
       if (filters.dateRange.from) {

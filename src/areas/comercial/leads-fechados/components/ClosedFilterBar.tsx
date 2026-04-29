@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, addMonths, subMonths, subWeeks, isSameMonth, isSameDay, isWithinInterval, setMonth, setYear } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Calendar, X, ChevronLeft, ChevronRight } from 'lucide-react';
-import { LeadClosed, ClosedFilters } from '../types';
+import { LeadClosed, ClosedFilters, DateRefField, DATE_REF_LABELS } from '../types';
 
 // --- Calendar sub-components ---
 
@@ -360,7 +360,7 @@ export function ClosedFilterBar({ leads, filters, onFiltersChange }: Props) {
   }, [leads]);
 
   const hasFilters = filters.vendedores.length > 0 || filters.astronomos.length > 0 || filters.cancelado !== 'all' ||
-    filters.dateRange.from || filters.dateRange.to;
+    filters.dateRange.from || filters.dateRange.to || filters.dateRef !== 'fechamento';
 
   const toggleVendedor = (v: string) => {
     const next = filters.vendedores.includes(v)
@@ -382,18 +382,48 @@ export function ClosedFilterBar({ leads, filters, onFiltersChange }: Props) {
     { value: 'sim', label: 'Cancelados' },
   ];
 
+  const dateRefOptions: { value: DateRefField; label: string }[] = [
+    { value: 'fechamento', label: DATE_REF_LABELS.fechamento },
+    { value: 'criacao', label: DATE_REF_LABELS.criacao },
+  ];
+
   return (
     <div className="card-glass p-4 mb-6 space-y-3">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-medium text-foreground">Filtros</h3>
         {hasFilters && (
           <button
-            onClick={() => onFiltersChange({ vendedores: [], astronomos: [], cancelado: 'all', dateRange: { from: null, to: null } })}
+            onClick={() => onFiltersChange({ vendedores: [], astronomos: [], cancelado: 'all', dateRange: { from: null, to: null }, dateRef: 'fechamento' })}
             className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
           >
             <X size={12} /> Limpar
           </button>
         )}
+      </div>
+
+      {/* Referência de Data — meta-filtro que muda como o filtro de período é interpretado */}
+      <div className="flex flex-col md:flex-row md:items-center gap-2 pb-2 border-b border-border/50">
+        <label className="text-xs text-muted-foreground shrink-0">Referência de Data:</label>
+        <div className="flex gap-1 flex-wrap">
+          {dateRefOptions.map((opt) => (
+            <button
+              key={opt.value}
+              onClick={() => onFiltersChange({ ...filters, dateRef: opt.value })}
+              className={`px-3 py-1.5 rounded-lg text-xs transition-colors ${
+                filters.dateRef === opt.value
+                  ? 'bg-primary text-white font-medium'
+                  : 'bg-secondary text-muted-foreground hover:text-foreground hover:bg-secondary/80'
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+        <span className="text-[11px] text-muted-foreground/70 italic md:ml-2">
+          {filters.dateRef === 'fechamento'
+            ? 'Filtra por data de fechamento (ou cancelamento, se cancelado).'
+            : 'Filtra por data de criação do lead no CRM.'}
+        </span>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-3">

@@ -24,6 +24,7 @@ export default function LeadsFechadosDashboard() {
       from: new Date(new Date().getFullYear(), 0, 1),
       to: new Date(),
     },
+    dateRef: 'fechamento',
   });
 
   const { data: leads = [], isLoading, error } = useClosedLeads();

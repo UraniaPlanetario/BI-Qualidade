@@ -86,11 +86,17 @@ Aplica filtros:
 - `astronomo` (lista)
 - `cancelado`: `'sim' | 'nao' | 'all'`
 - `dateRange.from / to`
+- `dateRef`: `'fechamento' | 'criacao'` — qual campo de data usar como referência
 
-**Regra importante:** leads cancelados usam `data_cancelamento_fmt` para comparação de data; os demais, `data_fechamento_fmt`.
+**Regra de referência de data (`dateRef`):**
+- `fechamento` (padrão): leads cancelados usam `data_cancelamento_fmt`; os demais, `data_fechamento_fmt`. Mesma regra antiga.
+- `criacao`: sempre `lead_created_at` (independente de cancelado). Útil pra ver leads pelo período em que entraram no CRM, não em que fecharam.
+
+A aba **"Por Origem"** (`OrigemBlock`) replica a mesma regra ao filtrar a view `gold.leads_closed_origem`.
 
 ## Filtros da tela ([`ClosedFilterBar.tsx`](../../src/areas/comercial/leads-fechados/components/ClosedFilterBar.tsx))
 
+- **Referência de Data:** Data de Fechamento / Data de Criação (toggle no topo da barra — muda como o filtro de período é interpretado em todas as abas)
 - Vendedor (multi)
 - Astrônomo (multi)
 - Status: Ativos / Cancelados / Todos
