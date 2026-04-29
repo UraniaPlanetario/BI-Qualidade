@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom';
 import { X, MapPin, Calendar as CalIcon, GraduationCap, Tag, Phone, Users as UsersIcon, ExternalLink } from 'lucide-react';
 import {
   Agendamento, AuditFlags, formatDateTime, formatDate, formatCurrency, statusLabel, statusColorClass,
@@ -24,8 +25,8 @@ export function AgendamentoModal({ open, agendamento, onClose, auditFlags }: Pro
       };
   const flagNome = f.nome, flagData = f.data, flagTarefa = f.tarefa;
 
-  return (
-    <div className="fixed inset-0 z-50 bg-black/50 flex items-start justify-center p-4 overflow-y-auto" onClick={onClose}>
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] bg-black/50 flex items-start justify-center p-4 overflow-y-auto" onClick={onClose}>
       <div
         className="bg-card border rounded-lg shadow-xl w-full max-w-2xl my-8"
         onClick={(e) => e.stopPropagation()}
@@ -103,7 +104,8 @@ export function AgendamentoModal({ open, agendamento, onClose, auditFlags }: Pro
           </span>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
