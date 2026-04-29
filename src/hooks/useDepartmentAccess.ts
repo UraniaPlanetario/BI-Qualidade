@@ -49,6 +49,10 @@ export function useDepartmentAccess() {
     canAccessRoute: (route: string): boolean => {
       if (!isRestricted) return true;
       if (!allowedRoutes) return false;
+      // Home sempre liberada (página de boas-vindas com favoritos/recentes,
+      // sem dados sensíveis). Sem isso usuários sem rotas em comum com `/`
+      // ficavam presos em "Acesso Negado" ao logar.
+      if (route === '/') return true;
       // Match de prefixo: liberar `/onboarding` também libera `/onboarding/X`.
       // É o comportamento que o admin espera ao "habilitar a pasta" no UI de
       // departamentos. Match com `/` evita falsos positivos (`/onboardingfoo`

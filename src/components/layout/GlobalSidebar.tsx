@@ -91,7 +91,6 @@ const SECTIONS: AreaSection[] = [
   {
     id: 'acesso-individual',
     label: 'Acesso Individual',
-    showWhenEmpty: true,
     areas: [
       { id: 'meu-calendario', label: 'Calendário Astrônomos', icon: GraduationCap, path: '/individual/calendario-astronomos' },
     ],
@@ -282,6 +281,11 @@ export function GlobalSidebar({ onLogout }: GlobalSidebarProps) {
               if (!hasAnyAccessibleLeaf(area)) return null;
               return inner;
             }
+
+            // Leaf: pré-filtra via useDepartmentAccess (síncrono e rápido) pra
+            // a section vazia ser detectada corretamente. RouteLink continua
+            // sendo o gatekeeper final (cobre route_access_policies específicas).
+            if (!hasAnyAccessibleLeaf(area)) return null;
 
             return (
               <RouteLink key={area.id} path={area.path}>
