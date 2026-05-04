@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import type { LeadAtual } from '@/areas/comercial/auditoria-funil-vendas/hooks/useFunilWhatsapp';
 
 /** Vendedor mapeado pro user logado (texto exato do custom field
  *  "Vendedor/Consultor" no Kommo). NULL se admin não preencheu o campo
@@ -49,6 +50,22 @@ export interface MeuLeadFechado {
   n_diarias: string | null;
   occurrence: number;
   lead_created_at: string | null;
+}
+
+/** Leads do vendedor logado em gold.funil_whats_leads_atual (pipeline Vendas
+ *  WhatsApp). Cruza por lead.responsible_user_id = users.kommo_user_id. */
+export function useMeusLeadsFunil() {
+  return useQuery<LeadAtual[]>({
+    queryKey: ['meus_leads_funil'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .schema('gold')
+        .rpc('get_meus_leads_funil');
+      if (error) throw error;
+      return (data ?? []) as LeadAtual[];
+    },
+    staleTime: 5 * 60 * 1000,
+  });
 }
 
 /** Leads fechados (gold.leads_closed) do vendedor logado, com pipeline/status
