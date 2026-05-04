@@ -85,6 +85,37 @@ O campo **não** é `l.custom_fields->>'Vendedor/Consultor'` direto. A função 
 
 **Validação feita em 2026-04-23:** comparando cubo pós-v4+overrides com XLSX "leads fechados em 2026" (448 leads), zero divergências de vendedor. O gap de 8 leads (440 BI vs 448 XLSX) é explicado por regra de negócio: 7 cancelados + 1 em funil "Equipes" + 1 que voltou pra Vendas (data_de_fechamento limpa).
 
+### `cancelado` em `gold.leads_closed` (regra v3, migration 057)
+
+A tabela `gold.leads_closed` (alimenta o dashboard de **Leads Fechados**) tem
+regra de cancelamento **diferente e mais estrita** que `cubo_leads_consolidado.status_lead`:
+
+| Condição | `cancelado` |
+|---|---|
+| `Data cancelamento` (custom field) **NÃO** preenchida | `false` |
+| `Data cancelamento` preenchida E `Data Fechamento <= Data cancelamento` | `true` |
+| `Data cancelamento` preenchida E `Data Fechamento > Data cancelamento` | `false` (recuperado) |
+
+**Diferenças vs `status_lead`:**
+
+1. **Não usa `Cancelado (Onboarding) = 'Sim'`** isoladamente. O custom field
+   booleano "Cancelado" sem `Data cancelamento` preenchida é considerado lixo
+   (caso real: lead 22404497 que tinha `Cancelado=Sim` mas `Data cancelamento=NULL`
+   e seguia ativo no Onboarding com fechamento pra abril).
+2. **Não usa movimentação pra fora** como sinal. Se o lead sair do Onboarding
+   pra Vendas WhatsApp (ex: 19 leads em abril/2026), só conta como cancelado
+   se o custom field `Data cancelamento` estiver preenchido.
+
+**Fallback de leads sem movimentação registrada (migration 057):** o sync de events
+do Kommo eventualmente perde movimentações antigas. Pra não excluir leads que
+estão atualmente em Onboarding mas não têm row em `gold.leads_movements`, a
+function `refresh_leads_closed` adiciona um terceiro caminho de entrada
+(`current_in_onboarding_no_movs`) que aceita qualquer lead com `pipeline_name`
+atual em Onboarding desde que tenha os custom fields obrigatórios (Vendedor,
+Data de Fechamento, Data Agendamento). Como não temos a data exata da entrada
+no Onboarding nesses casos, usa `lead.created_at` como aproximação para
+`entrada_onboarding_at`.
+
 ### Sobre `data_de_fechamento`
 
 Em `gold.cubo_leads_consolidado`, é parseado de `custom_fields.'Data de Fechamento'` como Unix epoch:
