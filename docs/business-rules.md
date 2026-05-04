@@ -85,7 +85,44 @@ O campo **não** é `l.custom_fields->>'Vendedor/Consultor'` direto. A função 
 
 **Validação feita em 2026-04-23:** comparando cubo pós-v4+overrides com XLSX "leads fechados em 2026" (448 leads), zero divergências de vendedor. O gap de 8 leads (440 BI vs 448 XLSX) é explicado por regra de negócio: 7 cancelados + 1 em funil "Equipes" + 1 que voltou pra Vendas (data_de_fechamento limpa).
 
-### `cancelado` em `gold.leads_closed` (regra v3, migration 057)
+### `gold.leads_closed` regra v4 (migrations 059 + 060)
+
+A função `gold.refresh_leads_closed` foi reescrita pra suportar **recompras** e
+detectar cancelamento via movimentação (pra histórico pré-custom-field):
+
+**1. Múltiplas occurrences por lead.** Antes a função deduplicava por
+`(lead_id, custom_field 'Data de Fechamento')` e perdia recompras (cliente
+volta a comprar — só a 1ª venda aparecia). Agora cada entrada externa no
+Onboarding (vinda de pipeline diferente) gera uma occurrence. Entradas com
+gap ≤ 30 dias da anterior do mesmo lead são consolidadas como 1 (quiques
+operacionais).
+
+**2. `data_fechamento_fmt` = data da movimentação pro Onboarding** —
+imutável, vem de `gold.leads_movements`. Custom field "Data de Fechamento"
+não controla mais a data exibida (era editável no Kommo e CS alterava
+depois).
+
+Exceção operacional: pra a **última occurrence**, se o custom field "Data
+de Fechamento" cai dentro de `[entrada-30d, entrada]`, usa o custom field.
+Cobre o caso "fechou 30/04 sex, mov só 04/05 segunda" — mantém em abril.
+
+**3. `cancelado` por `pipeline_final` da janela da occurrence:**
+- Janela = `[entrada_i, entrada_{i+1})` ou `[entrada_i, NOW)` se for última.
+- `pipeline_final` = `lead.pipeline_name` atual (se for última occurrence)
+  OU `pipeline_to` da última mov dentro da janela (intermediárias).
+- **Cancelada** se `pipeline_final ∈ ('Vendas WhatsApp', 'Outbound',
+  'Recepção Leads Insta', 'Resgate/Nutrição Whats')` (saiu pra captação).
+- Pra última occurrence, custom field "Data cancelamento" também cancela.
+- **Recuperação**: se Data Fechamento > Data cancelamento, `cancelado=false`.
+
+**4. Fallback pra leads sem mov registrada** (sync de events ocasionalmente
+perde events da API do Kommo — exemplo real: lead 23393894 movido pro
+Onboarding em 20/04/2026 mas o event não chegou). A função aceita o lead
+se `pipeline_name` atual está em Onboarding, e usa o **custom field "Data
+de Fechamento"** como `entrada_onboarding_at` (cai pra `lead.created_at`
+só se o custom field não estiver disponível).
+
+### `cancelado` em `gold.leads_closed` (regra v3, migration 057, ⚠ obsoleta)
 
 A tabela `gold.leads_closed` (alimenta o dashboard de **Leads Fechados**) tem
 regra de cancelamento **diferente e mais estrita** que `cubo_leads_consolidado.status_lead`:

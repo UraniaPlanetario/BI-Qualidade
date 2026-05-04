@@ -1,0 +1,36 @@
+-- gold.refresh_leads_closed v4: suporte completo a recompras + cancelamento
+-- via movimentação (pra leads pré-custom-field "Data cancelamento").
+--
+-- Mudanças principais vs v3:
+--
+-- 1. MÚLTIPLAS OCCURRENCES por lead. Cada entrada externa no Onboarding (de
+--    pipeline diferente do Onboarding) gera uma occurrence. Entradas com
+--    gap <= 30 dias da anterior são consolidadas como 1 só (quiques
+--    operacionais). Antes a função deduplicava por (lead, custom field) e
+--    perdia recompras.
+--
+-- 2. data_fechamento_fmt = entrada_onboarding_at na maioria dos casos.
+--    Exceção: se for a ÚLTIMA occurrence do lead E o custom field
+--    "Data de Fechamento" está dentro de [entrada-30d, entrada], usa
+--    LEAST(custom_field, entrada). Isso captura o caso operacional de
+--    "fechou 30/04 sex, mov só na seg 04/05" — mantém em abril.
+--
+-- 3. cancelado é determinado pelo PIPELINE FINAL da janela da occurrence:
+--    - Janela: [entrada_i, entrada_{i+1}) ou [entrada_i, NOW) se for última.
+--    - Pipeline final: pra última occurrence = lead.pipeline_name atual;
+--      pra intermediárias = pipeline_to da última mov dentro da janela.
+--    - Se pipeline final ∈ ('Vendas WhatsApp', 'Outbound', 'Recepção Leads
+--      Insta', 'Resgate/Nutrição Whats') → cancelada (saiu pra captação).
+--    - Adicionalmente, pra última occurrence: se "Data cancelamento"
+--      (custom field) está preenchida e dentro da janela, também cancela
+--      (regra v3).
+--
+-- 4. cancelado_at: data da mov pra captação OU "Data cancelamento" CF
+--    (preferindo CF se ambos existirem na última occurrence).
+--
+-- IMPORTANTE: a versão final aplicada inclui o ajuste da migration 060
+-- (fallback usa custom field "Data de Fechamento" como entrada quando
+-- preenchido, em vez de lead.created_at). A migration 060 sobrescreve
+-- esta — esta migration está aqui apenas como histórico.
+
+-- (corpo definitivo está em 060_fallback_usa_custom_field_data_fechamento.sql)
