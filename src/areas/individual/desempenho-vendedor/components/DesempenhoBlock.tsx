@@ -46,9 +46,14 @@ function toISO(d: Date | null): string | null {
  *  filtrando localmente pelo nome do vendedor (que aqui é único). */
 export function DesempenhoBlock({ vendedor }: Props) {
   const today = new Date();
+  // Default = "Último mês completo": começo a meio do mês, dados ainda esparsos;
+  // pegar o mês anterior como referência inicial dá visualização útil já no abrir.
+  // Usuário pode expandir/restringir no DateRangePicker.
+  const lastMonthStart = startOfMonth(subMonths(today, 1));
+  const lastMonthEnd = endOfMonth(subMonths(today, 1));
   const [dateRange, setDateRange] = useState<{ from: Date | null; to: Date | null }>({
-    from: startOfMonth(today),
-    to: today,
+    from: lastMonthStart,
+    to: lastMonthEnd,
   });
   const [tab, setTab] = useState<TabId>('tempo');
 
