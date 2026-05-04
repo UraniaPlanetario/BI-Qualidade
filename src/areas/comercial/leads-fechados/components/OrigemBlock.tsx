@@ -47,64 +47,49 @@ export function OrigemBlock({ filters }: Props) {
   const [canaisFiltro, setCanaisFiltro] = useState<string[]>([]);
   const [classFiltro, setClassFiltro] = useState<string[]>([]);
 
-  // Aplica filtros globais (vendedor/astronomo/cancelado/período) primeiro,
-  // depois os locais (canal/classificação)
+  // Helper: aplica os filtros globais (sempre só não-cancelados, igual às
+  // outras abas — esta aba é sobre origem dos fechamentos; cancelados não
+  // entram). Opcionalmente aplica os filtros locais (canal/classificação).
+  const passaFiltrosGlobais = (l: LeadClosedOrigem): boolean => {
+    if (l.cancelado) return false; // sempre só ativos
+    if (filters.vendedores.length > 0 && !filters.vendedores.includes(l.vendedor || '')) return false;
+    if (filters.astronomos.length > 0 && !filters.astronomos.includes(l.astronomo || '')) return false;
+    if (filters.cancelado === 'sim') return false; // status=Cancelados zera (consistente com Overview)
+    const refDateStr = filters.dateRef === 'criacao'
+      ? l.lead_created_at
+      : l.data_fechamento_fmt;
+    if (!refDateStr) return false;
+    const ref = refDateStr.slice(0, 10);
+    if (filters.dateRange.from) {
+      const y = filters.dateRange.from.getFullYear();
+      const m = String(filters.dateRange.from.getMonth() + 1).padStart(2, '0');
+      const d = String(filters.dateRange.from.getDate()).padStart(2, '0');
+      if (ref < `${y}-${m}-${d}`) return false;
+    }
+    if (filters.dateRange.to) {
+      const y = filters.dateRange.to.getFullYear();
+      const m = String(filters.dateRange.to.getMonth() + 1).padStart(2, '0');
+      const d = String(filters.dateRange.to.getDate()).padStart(2, '0');
+      if (ref > `${y}-${m}-${d}`) return false;
+    }
+    return true;
+  };
+
   const leads = useMemo(() => {
     return leadsRaw.filter((l) => {
-      if (filters.vendedores.length > 0 && !filters.vendedores.includes(l.vendedor || '')) return false;
-      if (filters.astronomos.length > 0 && !filters.astronomos.includes(l.astronomo || '')) return false;
-      if (filters.cancelado === 'sim' && !l.cancelado) return false;
-      if (filters.cancelado === 'nao' && l.cancelado) return false;
-      const refDateStr = filters.dateRef === 'criacao'
-        ? l.lead_created_at
-        : (l.cancelado ? l.data_cancelamento_fmt : l.data_fechamento_fmt);
-      if (!refDateStr) return false;
-      const ref = refDateStr.slice(0, 10);
-      if (filters.dateRange.from) {
-        const y = filters.dateRange.from.getFullYear();
-        const m = String(filters.dateRange.from.getMonth() + 1).padStart(2, '0');
-        const d = String(filters.dateRange.from.getDate()).padStart(2, '0');
-        if (ref < `${y}-${m}-${d}`) return false;
-      }
-      if (filters.dateRange.to) {
-        const y = filters.dateRange.to.getFullYear();
-        const m = String(filters.dateRange.to.getMonth() + 1).padStart(2, '0');
-        const d = String(filters.dateRange.to.getDate()).padStart(2, '0');
-        if (ref > `${y}-${m}-${d}`) return false;
-      }
+      if (!passaFiltrosGlobais(l)) return false;
       if (canaisFiltro.length > 0 && !canaisFiltro.includes(normalizeCanal(l.canal_entrada))) return false;
       if (classFiltro.length > 0 && !classFiltro.includes(l.caminho_origem)) return false;
       return true;
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [leadsRaw, filters, canaisFiltro, classFiltro]);
 
   // Opções dos selects: derivadas dos leads ANTES dos filtros locais
   // (pra que limpar um filtro permita escolher de novo).
   const leadsPreLocal = useMemo(() => {
-    return leadsRaw.filter((l) => {
-      if (filters.vendedores.length > 0 && !filters.vendedores.includes(l.vendedor || '')) return false;
-      if (filters.astronomos.length > 0 && !filters.astronomos.includes(l.astronomo || '')) return false;
-      if (filters.cancelado === 'sim' && !l.cancelado) return false;
-      if (filters.cancelado === 'nao' && l.cancelado) return false;
-      const refDateStr = filters.dateRef === 'criacao'
-        ? l.lead_created_at
-        : (l.cancelado ? l.data_cancelamento_fmt : l.data_fechamento_fmt);
-      if (!refDateStr) return false;
-      const ref = refDateStr.slice(0, 10);
-      if (filters.dateRange.from) {
-        const y = filters.dateRange.from.getFullYear();
-        const m = String(filters.dateRange.from.getMonth() + 1).padStart(2, '0');
-        const d = String(filters.dateRange.from.getDate()).padStart(2, '0');
-        if (ref < `${y}-${m}-${d}`) return false;
-      }
-      if (filters.dateRange.to) {
-        const y = filters.dateRange.to.getFullYear();
-        const m = String(filters.dateRange.to.getMonth() + 1).padStart(2, '0');
-        const d = String(filters.dateRange.to.getDate()).padStart(2, '0');
-        if (ref > `${y}-${m}-${d}`) return false;
-      }
-      return true;
-    });
+    return leadsRaw.filter(passaFiltrosGlobais);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [leadsRaw, filters]);
 
   const canalOptions = useMemo(() => {
