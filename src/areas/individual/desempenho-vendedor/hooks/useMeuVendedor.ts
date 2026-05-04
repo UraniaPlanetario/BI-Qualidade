@@ -33,3 +33,36 @@ export function useMeuKommoUserId() {
     staleTime: 60 * 60 * 1000,
   });
 }
+
+export interface MeuLeadFechado {
+  lead_id: number;
+  lead_name: string | null;
+  vendedor: string | null;
+  data_fechamento_fmt: string | null;
+  data_agendamento_fmt: string | null;
+  data_cancelamento_fmt: string | null;
+  cancelado: boolean;
+  pipeline_onboarding: string | null;
+  pipeline_atual: string | null;
+  status_atual: string | null;
+  lead_price: number | null;
+  n_diarias: string | null;
+  occurrence: number;
+  lead_created_at: string | null;
+}
+
+/** Leads fechados (gold.leads_closed) do vendedor logado, com pipeline/status
+ *  atuais (do bronze). Filtragem feita no banco via SECURITY DEFINER. */
+export function useMeusLeadsFechados() {
+  return useQuery<MeuLeadFechado[]>({
+    queryKey: ['meus_leads_fechados'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .schema('gold')
+        .rpc('get_meus_leads_fechados');
+      if (error) throw error;
+      return (data ?? []) as MeuLeadFechado[];
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+}
