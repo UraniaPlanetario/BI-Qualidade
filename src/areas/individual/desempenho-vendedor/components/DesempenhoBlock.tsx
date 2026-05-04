@@ -159,12 +159,39 @@ export function DesempenhoBlock({ vendedor, vendedorOverride }: Props) {
     const diariasPorLead = totalLeads > 0 ? totalDiarias / totalLeads : 0;
     const faturamento = ativos.reduce((s, l) => s + (l.lead_price || 0), 0);
     const totalCancelamentos = cancelados.length;
-    // Churn = cancelamentos / (fechamentos + cancelamentos) — proporção de leads
-    // do período que viraram cancelamento.
-    const totalGeral = totalLeads + totalCancelamentos;
-    const churnPct = totalGeral > 0 ? (totalCancelamentos / totalGeral) * 100 : 0;
-    return { totalLeads, totalDiarias, diariasPorLead, faturamento, totalCancelamentos, churnPct };
-  }, [ativos, cancelados]);
+
+    // Churn — regra Urânia (validada com Julia em 04/05/2026):
+    // Numerador  : cancelamentos do vendedor com data_cancelamento no período
+    // Denominador: TODOS os fechamentos do vendedor nos MESES-ORIGEM dos
+    //              cancelados (= meses YYYY-MM em que os cancelados foram
+    //              originalmente fechados).
+    // Ex: 2 canc em abril, leads originalmente fechados jan+fev. Vendedor
+    // fechou 20 leads em jan+fev. Churn = 2/20 = 10%.
+    // Cancelados também contam no denominador (eram fechamentos legítimos
+    // naquele mês, antes de cancelar).
+    const mesesOrigem = new Set<string>();
+    for (const c of cancelados) {
+      if (c.data_fechamento_fmt) mesesOrigem.add(c.data_fechamento_fmt.slice(0, 7));
+    }
+    let denominadorChurn = 0;
+    if (mesesOrigem.size > 0) {
+      // Itera leads brutos (não filtrados por período) — denominador olha
+      // TODOS os fechamentos do vendedor nos meses-origem, independente do
+      // filtro de período do dashboard.
+      for (const l of leads) {
+        if (!l.data_fechamento_fmt) continue;
+        const mes = l.data_fechamento_fmt.slice(0, 7);
+        if (mesesOrigem.has(mes)) denominadorChurn += 1;
+      }
+    }
+    const churnPct = denominadorChurn > 0 ? (totalCancelamentos / denominadorChurn) * 100 : 0;
+
+    return {
+      totalLeads, totalDiarias, diariasPorLead, faturamento,
+      totalCancelamentos, churnPct, denominadorChurn,
+      mesesOrigem: Array.from(mesesOrigem).sort(),
+    };
+  }, [ativos, cancelados, leads]);
 
   // Datasets mensais
   const fechMensal = useMemo(
@@ -313,10 +340,15 @@ export function DesempenhoBlock({ vendedor, vendedorOverride }: Props) {
             <p className="text-xs text-muted-foreground uppercase tracking-wide">Cancelamentos</p>
             <p className="text-3xl font-bold mt-1 text-rose-500">{vendasStats.totalCancelamentos.toLocaleString('pt-BR')}</p>
           </div>
-          <div className="card-glass p-4 rounded-xl text-center border border-amber-500/30">
+          <div
+            className="card-glass p-4 rounded-xl text-center border border-amber-500/30"
+            title={`Cancelamentos no período (${vendasStats.totalCancelamentos}) ÷ fechamentos nos meses-origem dos cancelados (${vendasStats.denominadorChurn})${vendasStats.mesesOrigem.length > 0 ? ` — meses-origem: ${vendasStats.mesesOrigem.join(', ')}` : ''}`}
+          >
             <p className="text-xs text-muted-foreground uppercase tracking-wide">Churn</p>
             <p className="text-3xl font-bold mt-1 text-amber-500">{vendasStats.churnPct.toFixed(1)}%</p>
-            <p className="text-[10px] text-muted-foreground/70 mt-1">canc / (fech + canc)</p>
+            <p className="text-[10px] text-muted-foreground/70 mt-1">
+              {vendasStats.totalCancelamentos} canc / {vendasStats.denominadorChurn} fech (meses-origem)
+            </p>
           </div>
         </div>
 
