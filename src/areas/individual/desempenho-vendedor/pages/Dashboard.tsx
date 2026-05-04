@@ -162,7 +162,6 @@ function ImpersonarSelector({ opcoes, atual, onChange }: ImpersonarSelectorProps
           {opcoes.map((o) => (
             <option key={o.vendedor} value={o.vendedor}>
               {o.vendedor}
-              {o.kommo_user_id == null ? ' (sem kommo_user_id)' : ''}
             </option>
           ))}
         </select>
