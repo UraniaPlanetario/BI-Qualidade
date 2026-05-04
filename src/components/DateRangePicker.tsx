@@ -260,12 +260,23 @@ export function DateRangePicker({ from, to, onChange, className, placeholder, sh
         <div
           ref={popoverRef}
           className="fixed p-4 rounded-xl shadow-2xl border border-border flex gap-4"
-          style={{
-            top: triggerRef.current ? triggerRef.current.getBoundingClientRect().bottom + 4 : 0,
-            left: triggerRef.current ? triggerRef.current.getBoundingClientRect().left : 0,
-            background: 'hsl(260, 30%, 10%)',
-            zIndex: 9999,
-          }}
+          style={(() => {
+            const rect = triggerRef.current?.getBoundingClientRect();
+            if (!rect) return { background: 'hsl(260, 30%, 10%)', zIndex: 9999 };
+            // Largura estimada: view 'days' tem atalhos + 2 calendários (~640px);
+            // 'months'/'years' são menores (~492px). Estimativa conservadora
+            // pra não vazar da viewport quando o trigger está no canto direito.
+            const popoverWidth = viewMode === 'days' ? 640 : 492;
+            const margin = 8;
+            const maxLeft = window.innerWidth - popoverWidth - margin;
+            const left = Math.max(margin, Math.min(rect.left, maxLeft));
+            return {
+              top: rect.bottom + 4,
+              left,
+              background: 'hsl(260, 30%, 10%)',
+              zIndex: 9999,
+            };
+          })()}
         >
           {viewMode === 'days' && (
             <div className="flex flex-col gap-1 pr-3 border-r border-border min-w-[120px]">
