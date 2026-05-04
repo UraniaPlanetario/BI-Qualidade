@@ -1,8 +1,9 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, LabelList, CartesianGrid,
 } from 'recharts';
 import { Loader2, ExternalLink } from 'lucide-react';
+import { DateRangePicker } from '@/components/DateRangePicker';
 import { useMeusLeadsFunil } from '../hooks/useMeuVendedor';
 import {
   ETAPAS_FUNIL, STATUS_CLOSED_WON, STATUS_CLOSED_LOST, kommoLeadUrl,
@@ -39,13 +40,33 @@ function fmtDateTime(iso: string | null | undefined): string {
   });
 }
 
+function ymdFromDate(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
 export function AuditoriaBlock({ kommoUserId: _k, kommoUserIdOverride }: Props) {
   const { data: leads = [], isLoading } = useMeusLeadsFunil(kommoUserIdOverride);
+  // Filtro opcional por data de criação do lead. Vazio = todos.
+  const [dateRange, setDateRange] = useState<{ from: Date | null; to: Date | null }>({ from: null, to: null });
 
-  // Só leads ativos (exclui Closed-won/lost)
+  // Só leads ativos (exclui Closed-won/lost) + filtro de data de criação
   const ativos = useMemo<LeadAtual[]>(() => {
-    return leads.filter((l) => l.status_id !== STATUS_CLOSED_WON && l.status_id !== STATUS_CLOSED_LOST);
-  }, [leads]);
+    const fromYmd = dateRange.from ? ymdFromDate(dateRange.from) : null;
+    const toYmd = dateRange.to ? ymdFromDate(dateRange.to) : null;
+    return leads.filter((l) => {
+      if (l.status_id === STATUS_CLOSED_WON || l.status_id === STATUS_CLOSED_LOST) return false;
+      if (fromYmd || toYmd) {
+        const created = l.lead_created_at?.slice(0, 10);
+        if (!created) return false;
+        if (fromYmd && created < fromYmd) return false;
+        if (toYmd && created > toYmd) return false;
+      }
+      return true;
+    });
+  }, [leads, dateRange]);
 
   const tarefasVencidas = useMemo(
     () => ativos.filter((l) => (l.dias_tarefa_vencida ?? 0) > 0),
@@ -96,8 +117,20 @@ export function AuditoriaBlock({ kommoUserId: _k, kommoUserIdOverride }: Props) 
     <div className="space-y-6">
       <div>
         <p className="text-sm text-muted-foreground">
-          Seus leads ativos no pipeline <strong>Vendas WhatsApp</strong> (cruzamento por <code className="text-xs">responsible_user_id</code>).
+          Seus leads ativos no pipeline <strong>Vendas WhatsApp</strong>.
         </p>
+      </div>
+
+      {/* Filtro de período de criação */}
+      <div className="card-glass p-4 rounded-xl">
+        <label className="text-xs text-muted-foreground block mb-1">Filtrar por data de criação do lead</label>
+        <DateRangePicker
+          from={dateRange.from}
+          to={dateRange.to}
+          onChange={setDateRange}
+          showPresets
+          placeholder="Todos os leads (sem filtro de data)"
+        />
       </div>
 
       {/* KPIs */}

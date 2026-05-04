@@ -6,7 +6,9 @@ import {
 import { Loader2 } from 'lucide-react';
 import { DateRangePicker } from '@/components/DateRangePicker';
 import { useTempoResposta } from '@/areas/comercial/desempenho-vendedor/hooks/useDesempenhoVendedor';
-import { useAlteracoesMensal } from '@/areas/comercial/desempenho-sdr/hooks/useDesempenhoSDR';
+import {
+  useAlteracoesMensal, useAlteracoesResumo,
+} from '@/areas/comercial/desempenho-sdr/hooks/useDesempenhoSDR';
 import { FAIXAS_TEMPO, calcNotaTempo, formatNumber } from '@/areas/comercial/desempenho-vendedor/types';
 import { useMeusLeadsFechados, type MeuLeadFechado } from '../hooks/useMeuVendedor';
 
@@ -78,6 +80,7 @@ export function DesempenhoBlock({ vendedor, vendedorOverride }: Props) {
   const { data: leads = [], isLoading: lLoading } = useMeusLeadsFechados(vendedorOverride);
   const { data: mensagens = [], isLoading: mLoading } = useTempoResposta(dateFromISO, dateToISO);
   const { data: alteracoesMensal = [], isLoading: aLoading } = useAlteracoesMensal(dateFromISO, dateToISO);
+  const { data: alteracoesResumo = [] } = useAlteracoesResumo(dateFromISO, dateToISO);
 
   // Filtra mensagens só do vendedor
   const minhasMensagens = useMemo(
@@ -87,6 +90,10 @@ export function DesempenhoBlock({ vendedor, vendedorOverride }: Props) {
   const minhasAlteracoes = useMemo(
     () => alteracoesMensal.filter((a) => a.user_name === vendedor),
     [alteracoesMensal, vendedor],
+  );
+  const meuResumoAlteracoes = useMemo(
+    () => alteracoesResumo.find((a) => a.user_name === vendedor) ?? null,
+    [alteracoesResumo, vendedor],
   );
 
   // Ativos (não cancelados) com data_fechamento_fmt no período
@@ -132,14 +139,18 @@ export function DesempenhoBlock({ vendedor, vendedorOverride }: Props) {
   // === Campos Alterados ===
   const camposStats = useMemo(() => {
     const total = minhasAlteracoes.reduce((s, a) => s + a.total, 0);
+    const leadsDistintos = meuResumoAlteracoes?.leads_distintos ?? 0;
+    const diasComAlt = meuResumoAlteracoes?.dias_com_alt ?? 0;
+    const mediaPorLead = leadsDistintos > 0 ? total / leadsDistintos : 0;
+    const mediaDiaria = diasComAlt > 0 ? total / diasComAlt : 0;
     const mensal = [...minhasAlteracoes]
       .sort((a, b) => a.mes_key.localeCompare(b.mes_key))
       .map((a) => {
         const [year, month] = a.mes_key.split('-');
         return { name: `${MONTH_LABELS[Number(month) - 1]}/${year.slice(2)}`, value: a.total };
       });
-    return { total, mensal };
-  }, [minhasAlteracoes]);
+    return { total, mediaPorLead, mediaDiaria, mensal };
+  }, [minhasAlteracoes, meuResumoAlteracoes]);
 
   // === Vendas (KPIs juntos) ===
   const vendasStats = useMemo(() => {
@@ -200,9 +211,6 @@ export function DesempenhoBlock({ vendedor, vendedorOverride }: Props) {
       <section className="space-y-4">
         <div className="border-b pb-2">
           <h2 className="text-xl font-semibold">Tempo de Resposta</h2>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Suas respostas a mensagens recebidas dentro da janela comercial (seg-sex 7h-19h BRT).
-          </p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="card-glass p-4 rounded-xl text-center">
@@ -239,10 +247,20 @@ export function DesempenhoBlock({ vendedor, vendedorOverride }: Props) {
             Quantidade de alterações em campos do CRM no período (proxy de atividade humana).
           </p>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="card-glass p-4 rounded-xl text-center">
             <p className="text-sm text-muted-foreground">Total de Campos Alterados</p>
             <p className="text-4xl font-bold text-foreground">{formatNumber(camposStats.total)}</p>
+          </div>
+          <div className="card-glass p-4 rounded-xl text-center">
+            <p className="text-sm text-muted-foreground">Média por Lead</p>
+            <p className="text-4xl font-bold text-foreground">{camposStats.mediaPorLead.toFixed(1)}</p>
+            <p className="text-xs text-muted-foreground mt-1">total / leads distintos com alteração</p>
+          </div>
+          <div className="card-glass p-4 rounded-xl text-center">
+            <p className="text-sm text-muted-foreground">Média Diária</p>
+            <p className="text-4xl font-bold text-foreground">{camposStats.mediaDiaria.toFixed(1)}</p>
+            <p className="text-xs text-muted-foreground mt-1">total / dias com alteração</p>
           </div>
         </div>
         <div className="card-glass p-4 rounded-xl">
