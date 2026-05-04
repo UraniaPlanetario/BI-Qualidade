@@ -195,6 +195,7 @@ export function DateRangePicker({ from, to, onChange, className, placeholder, sh
       { label: 'Última semana',  from: startOfWeek(subWeeks(today, 1)),          to: endOfWeek(subWeeks(today, 1)) },
       { label: 'Este mês',       from: startOfMonth(today),                      to: endOfMonth(today) },
       { label: 'Último mês',     from: startOfMonth(subMonths(today, 1)),        to: endOfMonth(subMonths(today, 1)) },
+      { label: 'Este ano',       from: new Date(today.getFullYear(), 0, 1),      to: today },
     ];
   }, []);
 
