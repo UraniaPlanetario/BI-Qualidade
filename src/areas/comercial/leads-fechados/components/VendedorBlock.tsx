@@ -20,10 +20,20 @@ interface VendedorStats {
   cancelados: number;
 }
 
-export function VendedorBlock({ leads }: { leads: LeadClosed[] }) {
+interface Props {
+  /** Não-cancelados filtrados pela data_fechamento_fmt. Alimenta KPIs principais
+   *  (leads, diárias, receita, ticket). */
+  ativos: LeadClosed[];
+  /** Cancelados filtrados pela data_cancelamento_fmt. Alimenta a coluna
+   *  "Cancelamentos" (agrupada por vendedor). */
+  cancelados: LeadClosed[];
+}
+
+export function VendedorBlock({ ativos, cancelados }: Props) {
   const vendedorData = useMemo(() => {
     const map: Record<string, VendedorStats> = {};
-    for (const l of leads) {
+    // Ativos → leads/diarias/receita
+    for (const l of ativos) {
       const key = l.vendedor || 'Não atribuído';
       if (!map[key]) {
         map[key] = { vendedor: key, leads: 0, diarias: 0, receita: 0, ticketMedio: 0, cancelados: 0 };
@@ -32,12 +42,20 @@ export function VendedorBlock({ leads }: { leads: LeadClosed[] }) {
       const parsed = parseInt(l.n_diarias || '0', 10);
       map[key].diarias += isNaN(parsed) ? 0 : parsed;
       map[key].receita += l.lead_price || 0;
-      if (l.cancelado) map[key].cancelados += 1;
+    }
+    // Cancelados (filtrados pela data de cancelamento) → coluna Cancelados.
+    // Se um vendedor só tem cancelamentos no período, ainda aparece na tabela.
+    for (const l of cancelados) {
+      const key = l.vendedor || 'Não atribuído';
+      if (!map[key]) {
+        map[key] = { vendedor: key, leads: 0, diarias: 0, receita: 0, ticketMedio: 0, cancelados: 0 };
+      }
+      map[key].cancelados += 1;
     }
     return Object.values(map)
       .map((v) => ({ ...v, ticketMedio: v.diarias > 0 ? v.receita / v.diarias : 0 }))
       .sort((a, b) => b.diarias - a.diarias);
-  }, [leads]);
+  }, [ativos, cancelados]);
 
   const chartData = useMemo(() => {
     return vendedorData.map((v) => ({ name: v.vendedor, value: v.diarias }));
@@ -71,7 +89,10 @@ export function VendedorBlock({ leads }: { leads: LeadClosed[] }) {
 
       {/* Table */}
       <div className="card-glass p-4 rounded-xl overflow-x-auto">
-        <h3 className="text-base font-semibold text-foreground mb-4">Detalhamento por Vendedor</h3>
+        <h3 className="text-base font-semibold text-foreground mb-1">Detalhamento por Vendedor</h3>
+        <p className="text-xs text-muted-foreground mb-3">
+          Leads/Diárias/Receita: leads não-cancelados com data de fechamento no período. Cancelamentos: leads com data de cancelamento no período.
+        </p>
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border">
@@ -80,7 +101,7 @@ export function VendedorBlock({ leads }: { leads: LeadClosed[] }) {
               <th className="text-right py-2 px-3 text-muted-foreground font-medium">Diárias Fechadas</th>
               <th className="text-right py-2 px-3 text-muted-foreground font-medium">Receita (R$)</th>
               <th className="text-right py-2 px-3 text-muted-foreground font-medium">Ticket Médio (R$)</th>
-              <th className="text-right py-2 px-3 text-muted-foreground font-medium">Cancelados</th>
+              <th className="text-right py-2 px-3 text-muted-foreground font-medium">Cancelamentos</th>
             </tr>
           </thead>
           <tbody>
@@ -91,7 +112,7 @@ export function VendedorBlock({ leads }: { leads: LeadClosed[] }) {
                 <td className="py-2 px-3 text-right text-foreground">{v.diarias}</td>
                 <td className="py-2 px-3 text-right text-foreground">R$ {formatCurrency(v.receita)}</td>
                 <td className="py-2 px-3 text-right text-foreground">R$ {formatCurrency(v.ticketMedio)}</td>
-                <td className="py-2 px-3 text-right text-foreground">{v.cancelados}</td>
+                <td className="py-2 px-3 text-right text-rose-500">{v.cancelados || '—'}</td>
               </tr>
             ))}
           </tbody>

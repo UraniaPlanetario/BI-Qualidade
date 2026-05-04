@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import {
-  useClosedLeads, useFilteredClosed, useFilteredAtivos, useFilteredCancelados,
+  useClosedLeads, useFilteredAtivos, useFilteredCancelados,
 } from '../hooks/useClosedLeads';
 import { ClosedFilters } from '../types';
 import { ClosedFilterBar } from '../components/ClosedFilterBar';
@@ -30,10 +30,11 @@ export default function LeadsFechadosDashboard() {
   });
 
   const { data: leads = [], isLoading, error } = useClosedLeads();
-  const filtered = useFilteredClosed(leads, filters);
-  // KPIs separados pro Overview: ativos vão por data_fechamento, cancelados
-  // por data_cancelamento (assim um lead fechado em mar e cancelado em abr
-  // aparece no KPI "Cancelados" ao filtrar abr, mas não nos KPIs principais).
+  // Separação canônica em todas as abas:
+  //  - ativos: não-cancelados com data_fechamento_fmt no período
+  //  - cancelados: cancelados com data_cancelamento_fmt no período
+  // Assim "leads/diárias fechadas" nunca incluem leads cancelados, e a coluna
+  // "Cancelamentos" sempre conta pela data de cancelamento.
   const ativos = useFilteredAtivos(leads, filters);
   const cancelados = useFilteredCancelados(leads, filters);
   const [activeSection, setActiveSection] = useState('overview');
@@ -80,8 +81,8 @@ export default function LeadsFechadosDashboard() {
 
       <div className="max-w-6xl">
         {activeSection === 'overview' && <OverviewBlock ativos={ativos} cancelados={cancelados} />}
-        {activeSection === 'vendedor' && <VendedorBlock leads={filtered} />}
-        {activeSection === 'astronomos' && <AstronomoBlock leads={filtered} />}
+        {activeSection === 'vendedor' && <VendedorBlock ativos={ativos} cancelados={cancelados} />}
+        {activeSection === 'astronomos' && <AstronomoBlock ativos={ativos} />}
         {activeSection === 'origem' && <OrigemBlock filters={filters} />}
       </div>
     </div>

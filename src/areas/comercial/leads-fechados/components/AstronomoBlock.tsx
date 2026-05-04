@@ -19,10 +19,12 @@ interface AstronomoStats {
   ticketMedio: number;
 }
 
-export function AstronomoBlock({ leads }: { leads: LeadClosed[] }) {
+/** Recebe `ativos` = leads não-cancelados com data de fechamento no período.
+ *  KPIs e tabela ignoram cancelados por design — a aba é sobre fechamentos. */
+export function AstronomoBlock({ ativos }: { ativos: LeadClosed[] }) {
   const astronomoData = useMemo(() => {
     const map: Record<string, AstronomoStats> = {};
-    for (const l of leads) {
+    for (const l of ativos) {
       const key = l.astronomo || 'Não atribuído';
       if (!map[key]) {
         map[key] = { astronomo: key, leads: 0, diarias: 0, receita: 0, ticketMedio: 0 };
@@ -35,7 +37,7 @@ export function AstronomoBlock({ leads }: { leads: LeadClosed[] }) {
     return Object.values(map)
       .map((v) => ({ ...v, ticketMedio: v.diarias > 0 ? v.receita / v.diarias : 0 }))
       .sort((a, b) => b.diarias - a.diarias);
-  }, [leads]);
+  }, [ativos]);
 
   const chartData = useMemo(() => {
     return astronomoData.map((v) => ({ name: v.astronomo, value: v.diarias }));
